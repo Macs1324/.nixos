@@ -6,6 +6,12 @@
   home.username = "macs";
   home.homeDirectory = "/home/macs";
 
+  programs.git = {
+	enable = true;
+	userName = "Macs1324";
+	userEmail = "max.blank410@gmail.com";
+  };
+
   wayland = {
 	windowManager.hyprland = {
 		enable = true;
