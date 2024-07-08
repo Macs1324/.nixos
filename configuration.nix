@@ -91,6 +91,8 @@
 
   # Install firefox.
   programs.firefox.enable = true;
+  programs.hyprland.enable = true;
+  programs.lazygit.enable = true;
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
@@ -103,6 +105,7 @@
     neovim
     git
     gh
+    kitty
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
