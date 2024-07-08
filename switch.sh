@@ -1,2 +1,3 @@
 sudo nixos-rebuild switch --flake .#nixos &&
-home-manager switch --flake .
+home-manager switch --flake . &&
+lazygit
