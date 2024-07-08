@@ -1,49 +1,20 @@
-{ config, pkgs, ... }:
-
 {
+  config,
+  pkgs,
+  ...
+}: {
+  imports = [
+    ./home/hyprland.nix
+  ];
   # Home Manager needs a bit of information about you and the
   # paths it should manage.
   home.username = "macs";
   home.homeDirectory = "/home/macs";
 
   programs.git = {
-	enable = true;
-	userName = "Macs1324";
-	userEmail = "max.blank410@gmail.com";
-  };
-
-  wayland = {
-	windowManager.hyprland = {
-		enable = true;
-		settings = {
-			"$mod" = "SUPER";
-			bind = [
-				"$mod, Q, exec, kitty"
-			]
-			++ (
-			# workspaces
-			# binds $mod + [shift +] {1..10} to [move to] workspace {1..10}
-			builtins.concatLists (builtins.genList (
-			    x: let
-			      ws = let
-				c = (x + 1) / 10;
-			      in
-				builtins.toString (x + 1 - (c * 10));
-			    in [
-			      "$mod, ${ws}, workspace, ${toString (x + 1)}"
-			      "$mod SHIFT, ${ws}, movetoworkspace, ${toString (x + 1)}"
-			    ]
-			  )
-			  10)
-		      );
-			bindm = [
-			    # mouse movements
-			    "$mod, mouse:272, movewindow"
-			    "$mod, mouse:273, resizewindow"
-			    "$mod ALT, mouse:272, resizewindow"
-			];
-		};
-	};
+    enable = true;
+    userName = "Macs1324";
+    userEmail = "max.blank410@gmail.com";
   };
 
   # This value determines the Home Manager release that your
