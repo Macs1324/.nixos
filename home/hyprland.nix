@@ -84,7 +84,10 @@
   };
   services.hyprpaper = let
     wallpaper_path = "~/.nixos/assets/wallpapers/${pc}.png";
-    display = if pc == "worklaptop" then eDP-1" else "DP-2";
+    display =
+      if pc == "worklaptop"
+      then "eDP-1"
+      else "DP-2";
   in {
     enable = true;
     settings = {
