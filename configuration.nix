@@ -4,13 +4,20 @@
 {
   config,
   pkgs,
+  pc,
+  pcs,
   ...
 }: {
-  imports = [
-    # Include the results of the hardware scan.
-    ./hardware-configuration.nix
-    ./system/games.nix
-  ];
+  imports =
+    [
+      # Include the results of the hardware scan.
+      ./hardware-configuration.nix
+    ]
+    ++ (
+      if (pc == "homedesktop")
+      then [./system/games.nix]
+      else []
+    );
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;

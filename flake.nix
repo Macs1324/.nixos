@@ -16,17 +16,30 @@
     system = "x86_64-linux";
     lib = nixpkgs.lib;
     pkgs = nixpkgs.legacyPackages.${system};
+
+    pcs = {
+      worklaptop = "worklaptop";
+      workdesktop = "workdesktop";
+      homedesktop = "homedesktop";
+    };
+    pc = pcs.homedesktop;
   in {
     nixosConfigurations = {
       nixos = lib.nixosSystem {
         inherit system;
         modules = [./configuration.nix];
+        specialArgs = {
+          inherit pc;
+        };
       };
     };
     homeConfigurations = {
       macs = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
         modules = [./home.nix];
+        extraSpecialArgs = {
+          inherit pc;
+        };
       };
     };
   };
