@@ -1,6 +1,7 @@
 {
   config,
   pkgs,
+  pc,
   ...
 }: {
   programs.wofi = {
@@ -82,7 +83,8 @@
     };
   };
   services.hyprpaper = let
-    wallpaper_path = "~/.nixos/assets/wallpapers/forest_mountains.jpg";
+    wallpaper_path = "~/.nixos/assets/wallpapers/${pc}.png";
+    display = if pc == "worklaptop" then eDP-1" else "DP-2";
   in {
     enable = true;
     settings = {
@@ -93,7 +95,7 @@
       preload = [wallpaper_path];
 
       wallpaper = [
-        "eDP-1,${wallpaper_path}"
+        "${display},${wallpaper_path}"
       ];
     };
   };
