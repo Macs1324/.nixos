@@ -9,7 +9,6 @@
       allow_markup = true;
       gtk_dark = true;
       allow_images = true;
-      image_size = 48;
     };
 
     style = ''
@@ -35,10 +34,12 @@
       settings = {
         settings = {
           "$mod" = "SUPER";
+          "$term" = "alacritty";
           bind =
             [
-              "$mod, Q, exec, kitty"
+              "$mod, Q, exec, $term"
               "$mod, O, exec, wofi --show drun"
+              "$mod, C, killactive"
             ]
             ++ (
               # workspaces
@@ -61,6 +62,14 @@
             "$mod, mouse:272, movewindow"
             "$mod, mouse:273, resizewindow"
             "$mod ALT, mouse:272, resizewindow"
+          ];
+          bezier = [
+            "overshot,0.05,0.9,0.1,1.1"
+            "ease,0.33, 1, 0.68, 1"
+          ];
+          animation = [
+            "workspaces,1,4,ease,slidevert"
+            "windows,1,4.5,overshot,slide"
           ];
         };
       };
