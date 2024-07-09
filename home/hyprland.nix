@@ -40,6 +40,12 @@
               "$mod, Q, exec, $term"
               "$mod, O, exec, wofi --show drun"
               "$mod, C, killactive"
+              "$mod, S, fullscreen"
+              "$mod, F, togglefloating"
+              "$mod, h, movefocus, l"
+              "$mod, j, movefocus, d"
+              "$mod, k, movefocus, u"
+              "$mod, l, movefocus, r"
             ]
             ++ (
               # workspaces
