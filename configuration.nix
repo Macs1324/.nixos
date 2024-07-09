@@ -60,8 +60,13 @@
   # };
 
   # Enable the KDE Plasma Desktop Environment.
-  services.displayManager.sddm.enable = true;
-  services.displayManager.sddm.wayland.enable = true;
+
+  services.displayManager.sddm = {
+    enable = true;
+    wayland.enable = true;
+    theme = "catppuccin-mocha";
+    package = pkgs.kdePackages.sddm;
+  };
   # services.desktopManager.plasma6.enable = true;
 
   # Configure keymap in X11
@@ -119,6 +124,15 @@
     alejandra
     emacs
     libnotify
+    (
+      pkgs.catppuccin-sddm.override {
+        flavor = "mocha";
+        font = "Noto Sans";
+        fontSize = "9";
+        background = "${./assets/wallpapers/sddm.jpg}";
+        loginBackground = true;
+      }
+    )
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
