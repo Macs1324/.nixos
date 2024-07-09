@@ -75,4 +75,20 @@
       };
     };
   };
+  services.hyprpaper = let
+    wallpaper_path = "~/.nixos/assets/wallpapers/forest_mountains.jpg";
+  in {
+    enable = true;
+    settings = {
+      ipc = "on";
+      splash = false;
+      # splash_offset = 2.0;
+
+      preload = [wallpaper_path];
+
+      wallpaper = [
+        "eDP-1,${wallpaper_path}"
+      ];
+    };
+  };
 }

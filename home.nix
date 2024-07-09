@@ -16,6 +16,10 @@
     userName = "Macs1324";
     userEmail = "max.blank410@gmail.com";
   };
+  programs.gh = {
+    enable = true;
+    gitCredentialHelper.enable = true;
+  };
   programs.alacritty.enable = true;
 
   # This value determines the Home Manager release that your
