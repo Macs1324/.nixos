@@ -38,15 +38,23 @@
           "$term" = "alacritty";
           bind =
             [
+              # Commands
               "$mod, Q, exec, $term"
               "$mod, O, exec, wofi --show drun"
               "$mod, C, killactive"
+              # Manage view
               "$mod, S, fullscreen"
               "$mod, F, togglefloating"
+              # Move focus
               "$mod, h, movefocus, l"
               "$mod, j, movefocus, d"
               "$mod, k, movefocus, u"
               "$mod, l, movefocus, r"
+              # Move windows
+              "$mod SHIFT, h, movewindow, l"
+              "$mod SHIFT, j, movewindow, d"
+              "$mod SHIFT, k, movewindow, u"
+              "$mod SHIFT, l, movewindow, r"
             ]
             ++ (
               # workspaces
