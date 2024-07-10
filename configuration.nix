@@ -145,6 +145,10 @@
     shellcheck
     rustup
     python3
+    gcc
+    zig
+    #Font
+    jetbrains-mono
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
