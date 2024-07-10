@@ -108,7 +108,12 @@
   programs.firefox.enable = true;
   programs.hyprland.enable = true;
   programs.lazygit.enable = true;
-  programs.git.enable = true;
+  programs.git = {
+    enable = true;
+    config = {
+      credential = {helper = "store";};
+    };
+  };
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
