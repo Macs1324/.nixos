@@ -38,6 +38,13 @@
       ];
     };
   };
+
+  programs.bash = {
+    enable = true;
+    bashrcExtra = ''
+      export PATH=$PATH:~/.config/emacs/bin
+    '';
+  };
   services.dunst = {
     enable = true;
     settings = {
