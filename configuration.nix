@@ -138,8 +138,11 @@
         loginBackground = true;
       }
     )
+    nodejs
+    # Emacs / editor utils
     ripgrep
     fd
+    shellcheck
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
