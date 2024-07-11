@@ -80,6 +80,7 @@
   services.pipewire = {
     enable = true;
     alsa.enable = true;
+    wireplumber.enable = true;
     alsa.support32Bit = true;
     pulse.enable = true;
     # If you want to use JACK applications, uncomment this
@@ -149,6 +150,10 @@
     zig
     #Font
     jetbrains-mono
+    xdg-desktop-portal-hyprland
+    google-chrome
+    pavucontrol
+    pulseaudio
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
