@@ -37,6 +37,13 @@
         settings = {
           "$mod" = "SUPER";
           "$term" = "alacritty";
+          monitor =
+            if pc == "workdesktop"
+            then [
+              "DP-2, 3440x1440@165.00, 0x0, 1"
+              "DP-1, 2560x1440@143.86, 3440x0, 1"
+            ]
+            else [];
           bind =
             [
               # Commands
@@ -91,24 +98,40 @@
       };
     };
   };
-  services.hyprpaper = let
-    wallpaper_path = "~/.nixos/assets/wallpapers/${pc}.png";
-    display =
-      if pc == "worklaptop"
-      then "eDP-1"
-      else "DP-2";
-  in {
-    enable = true;
-    settings = {
-      ipc = "on";
-      splash = false;
-      # splash_offset = 2.0;
+  services.hyprpaper =
+    if pc == "workdesktop"
+    then let
+      wallpaper = "~/.nixos/assets/wallpapers/workdesktop";
+    in {
+      enable = true;
+      settings = {
+        ipc = "on";
+        splash = false;
+        preload = ["${wallpaper}-1.jpg" "${wallpaper}-2.jpg"];
+        wallpaper = [
+          "DP-2,${wallpaper}-2.jpg"
+          "DP-1,${wallpaper}-1.jpg"
+        ];
+      };
+    }
+    else let
+      wallpaper_path = "~/.nixos/assets/wallpapers/${pc}.png";
+      display =
+        if pc == "worklaptop"
+        then "eDP-1"
+        else "DP-2";
+    in {
+      enable = true;
+      settings = {
+        ipc = "on";
+        splash = false;
+        # splash_offset = 2.0;
 
-      preload = [wallpaper_path];
+        preload = [wallpaper_path];
 
-      wallpaper = [
-        "${display},${wallpaper_path}"
-      ];
+        wallpaper = [
+          "${display},${wallpaper_path}"
+        ];
+      };
     };
-  };
 }
