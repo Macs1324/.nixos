@@ -34,6 +34,9 @@
       enable = true;
       xwayland.enable = true;
       settings = {
+        decoration = {
+          rounding = 10;
+        };
         settings = {
           "$mod" = "SUPER";
           "$term" = "alacritty";
