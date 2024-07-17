@@ -54,6 +54,13 @@
               "DP-1, 2560x1440@143.86, 3440x0, 1"
             ]
             else [];
+          workspace =
+            if pc == "workdesktop"
+            then [
+              "1, monitor:DP-2"
+              "2, monitor:DP-1"
+            ]
+            else [];
           bind =
             [
               # Commands
