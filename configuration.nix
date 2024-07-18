@@ -138,7 +138,7 @@
   users.users.macs = {
     isNormalUser = true;
     description = "Max Blank";
-    extraGroups = ["networkmanager" "wheel"];
+    extraGroups = ["networkmanager" "wheel" "uinput" "video" "render"];
     packages = with pkgs; [
       kdePackages.kate
       #  thunderbird
@@ -194,6 +194,7 @@
     google-chrome
     pavucontrol
     pulseaudio
+    clipman
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
