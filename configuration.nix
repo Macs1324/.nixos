@@ -13,11 +13,11 @@
       # Include the results of the hardware scan.
       ./hardware-configuration.nix
     ]
-    ++ (
-      if (pc == "homedesktop")
-      then [./system/games.nix]
-      else []
-    );
+    ++ {
+      "homedesktop" = [./system/games.nix];
+      "workdesktop" = [./system/work.nix];
+    }
+    .${pc};
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
@@ -155,6 +155,7 @@
       credential = {helper = "store";};
     };
   };
+  programs.direnv.enable = true;
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
@@ -186,7 +187,6 @@
     shellcheck
     rustup
     python3
-    gcc
     zig
     #Font
     jetbrains-mono
@@ -194,7 +194,6 @@
     google-chrome
     pavucontrol
     pulseaudio
-    direnv
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
