@@ -32,6 +32,12 @@
         };
         opacity = 0.4;
       };
+      font = {
+        normal = {
+          family = "Hack Nerd Font Mono";
+          style = "Medium";
+        };
+      };
       keyboard.bindings = [
         {
           key = "K";

@@ -67,6 +67,12 @@
               "$mod, Q, exec, $term"
               "$mod, O, exec, wofi --show drun"
               "$mod, C, killactive"
+              "${
+                if pc == "workdesktop"
+                then "$mod, N, exec, cd ~/Code/uxstream/ && neovide --fork ."
+                else ""
+              }"
+
               # Manage view
               "$mod, S, fullscreen"
               "$mod, F, togglefloating"

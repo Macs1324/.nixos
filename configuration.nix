@@ -188,13 +188,17 @@
     rustup
     python3
     zig
-    #Font
-    jetbrains-mono
+    gcc
     xdg-desktop-portal-hyprland
     google-chrome
     pavucontrol
     pulseaudio
     clipman
+    neovide
+  ];
+
+  fonts.packages = with pkgs; [
+    nerdfonts
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
