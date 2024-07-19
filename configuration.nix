@@ -195,6 +195,7 @@
     pulseaudio
     clipman
     neovide
+    bacon
   ];
 
   fonts.packages = with pkgs; [
