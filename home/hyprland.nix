@@ -64,7 +64,7 @@
             else [];
           workspace =
             [
-              "special, on-created-empty:rnote"
+              "special:notes, on-created-empty:rnote"
             ]
             ++ (
               if pc == "workdesktop"
@@ -84,7 +84,7 @@
               "$mod, V, layoutmsg, togglesplit"
               "$mod SHIFT, V, layoutmsg, swapsplit"
               "CTRL ALT, L, exec, hyprlock"
-              "$mod, A, togglespecialworkspace"
+              "$mod, A, togglespecialworkspace, notes"
               "${
                 if pc == "workdesktop" || pc == "worklaptop"
                 then "$mod, N, exec, cd ~/Code/uxstream/ && neovide --fork ."
