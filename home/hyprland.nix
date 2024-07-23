@@ -79,7 +79,7 @@
               "$mod, V, layoutmsg, togglesplit"
               "$mod SHIFT, V, layoutmsg, swapsplit"
               "${
-                if pc == "workdesktop"
+                if pc == "workdesktop" || pc == "worklaptop"
                 then "$mod, N, exec, cd ~/Code/uxstream/ && neovide --fork ."
                 else "$mod, N, exec, notify-send 'cannot open uxstream workspace'"
               }"

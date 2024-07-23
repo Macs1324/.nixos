@@ -2,12 +2,21 @@
   config,
   lib,
   pkgs,
+  pc,
   ...
 }: {
   nixpkgs.config.allowUnfree = true;
   programs.adb.enable = true;
-  environment.systemPackages = with pkgs; [
-    gpt4all-cuda
-    android-studio
-  ];
+  environment.systemPackages = with pkgs;
+    [
+      android-studio
+      redis
+    ]
+    ++ (
+      if pc == "workdesktop"
+      then [
+        gpt4all-cuda
+      ]
+      else []
+    );
 }
