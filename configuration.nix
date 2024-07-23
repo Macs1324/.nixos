@@ -16,7 +16,7 @@
     ++ {
       "homedesktop" = [./system/games.nix];
       "workdesktop" = [./system/work.nix];
-      "worklaptop" = [];
+      "worklaptop" = [./system/work.nix];
     }
     .${pc};
 
@@ -200,6 +200,7 @@
     clipman
     neovide
     bacon
+    rnote # note app
   ];
 
   fonts.packages = with pkgs; [

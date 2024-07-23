@@ -63,12 +63,17 @@
             ]
             else [];
           workspace =
-            if pc == "workdesktop"
-            then [
-              "1, monitor:DP-2"
-              "2, monitor:DP-1"
+            [
+              "special, on-created-empty:rnote"
             ]
-            else [];
+            ++ (
+              if pc == "workdesktop"
+              then [
+                "1, monitor:DP-2"
+                "2, monitor:DP-1"
+              ]
+              else []
+            );
           bind =
             [
               # Commands
@@ -78,6 +83,8 @@
               "$mod, P, pseudo"
               "$mod, V, layoutmsg, togglesplit"
               "$mod SHIFT, V, layoutmsg, swapsplit"
+              "CTRL ALT, L, exec, hyprlock"
+              "$mod, A, togglespecialworkspace"
               "${
                 if pc == "workdesktop" || pc == "worklaptop"
                 then "$mod, N, exec, cd ~/Code/uxstream/ && neovide --fork ."

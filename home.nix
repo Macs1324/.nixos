@@ -48,6 +48,14 @@
     };
   };
 
+  gtk = {
+    enable = true;
+    theme = {
+      name = "Materia-dark";
+      package = pkgs.materia-theme;
+    };
+  };
+
   programs.waybar.enable = true;
   programs.ncspot.enable = true;
   programs.cava.enable = true;
