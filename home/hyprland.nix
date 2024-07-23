@@ -44,6 +44,14 @@
           animate_manual_resizes = true;
           animate_mouse_windowdragging = true;
         };
+        exec-once = [
+          "waybar"
+        ];
+        dwindle = {
+          pseudotile = true;
+          smart_split = true;
+          preserve_split = true;
+        };
         settings = {
           "$mod" = "SUPER";
           "$term" = "alacritty";
@@ -67,10 +75,13 @@
               "$mod, Q, exec, $term"
               "$mod, O, exec, wofi --show drun"
               "$mod, C, killactive"
+              "$mod, P, pseudo"
+              "$mod, V, layoutmsg, togglesplit"
+              "$mod SHIFT, V, layoutmsg, swapsplit"
               "${
                 if pc == "workdesktop"
                 then "$mod, N, exec, cd ~/Code/uxstream/ && neovide --fork ."
-                else ""
+                else "$mod, N, exec, notify-send 'cannot open uxstream workspace'"
               }"
 
               # Manage view

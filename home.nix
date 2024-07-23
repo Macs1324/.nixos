@@ -35,7 +35,7 @@
       font = {
         normal = {
           family = "Hack Nerd Font Mono";
-          style = "Medium";
+          style = "Regular";
         };
       };
       keyboard.bindings = [
@@ -47,6 +47,10 @@
       ];
     };
   };
+
+  programs.waybar.enable = true;
+  programs.ncspot.enable = true;
+  programs.cava.enable = true;
 
   programs.bash = {
     enable = true;
