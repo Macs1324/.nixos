@@ -22,7 +22,7 @@
       workdesktop = "workdesktop";
       homedesktop = "homedesktop";
     };
-    pc = pcs.homedesktop;
+    pc = pcs.worklaptop;
   in {
     nixosConfigurations = {
       nixos = lib.nixosSystem {
