@@ -16,6 +16,7 @@
     ++ {
       "homedesktop" = [./system/games.nix];
       "workdesktop" = [./system/work.nix];
+      "worklaptop" = [];
     }
     .${pc};
 
@@ -89,7 +90,10 @@
     else {};
 
   # Load nvidia driver for Xorg and Wayland
-  services.xserver.videoDrivers = ["nvidia"];
+  services.xserver.videoDrivers =
+    if pc == "workdesktop"
+    then ["nvidia"]
+    else ["modesetting" "fbdev"];
 
   # Enable the X11 windowing system.
   # You can disable this if you're only using the Wayland session.
