@@ -197,7 +197,7 @@
     google-chrome
     pavucontrol
     pulseaudio
-    clipman
+    clipse
     neovide
     bacon
     rnote # note app

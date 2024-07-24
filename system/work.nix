@@ -19,4 +19,6 @@
       ]
       else []
     );
+
+  services.redis.servers."uxstream".enable = true;
 }

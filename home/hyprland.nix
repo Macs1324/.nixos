@@ -46,6 +46,7 @@
         };
         exec-once = [
           "waybar"
+          "exec-once = clipse -listen"
         ];
         dwindle = {
           pseudotile = true;
@@ -74,6 +75,10 @@
               ]
               else []
             );
+          windowrulev2 = [
+            "float,class:(clipse)"
+            "size 622 652,class:(clipse)"
+          ];
           bind =
             [
               # Commands
@@ -85,6 +90,7 @@
               "$mod SHIFT, V, layoutmsg, swapsplit"
               "CTRL ALT, L, exec, hyprlock"
               "$mod, A, togglespecialworkspace, notes"
+              "$mod CTRL, V, exec, alacritty --class clipse -e clipse"
               "${
                 if pc == "workdesktop" || pc == "worklaptop"
                 then "$mod, N, exec, cd ~/Code/uxstream/ && neovide --fork ."
