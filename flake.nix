@@ -22,7 +22,7 @@
       workdesktop = "workdesktop";
       homedesktop = "homedesktop";
     };
-    pc = pcs.worklaptop;
+    pc = lib.strings.removeSuffix "\n" "${builtins.readFile ./pc}";
   in {
     nixosConfigurations = {
       nixos = lib.nixosSystem {
