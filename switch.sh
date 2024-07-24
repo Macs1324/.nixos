@@ -5,5 +5,6 @@ git add hardware-configuration.nix
 sudo nixos-rebuild switch --flake .#nixos &&
 home-manager switch --flake . &&
 
-git rm hardware-configuration.nix
+git rm hardware-configuration.nix --cached
+rm hardware-configuration.nix
 lazygit
