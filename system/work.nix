@@ -20,5 +20,8 @@
       else []
     );
 
-  services.redis.servers."uxstream".enable = true;
+  services.redis.servers."uxstream" = {
+    enable = true;
+    port = 6379;
+  };
 }
