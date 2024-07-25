@@ -202,6 +202,8 @@
     neovide
     bacon
     rnote # note app
+    zip
+    unzip
   ];
 
   fonts.packages = with pkgs; [
