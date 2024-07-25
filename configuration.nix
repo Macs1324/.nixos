@@ -159,7 +159,24 @@
       credential = {helper = "store";};
     };
   };
-  programs.direnv.enable = true;
+  programs.zsh = {
+    enable = true;
+    autosuggestions.enable = true;
+    zsh-autoenv.enable = true;
+    syntaxHighlighting.enable = true;
+    ohMyZsh = {
+      enable = true;
+      theme = "robbyrussell";
+      plugins = [
+        "git"
+        "npm"
+        "history"
+        "node"
+        "rust"
+        "deno"
+      ];
+    };
+  };
   programs.nix-ld.enable = true;
 
   # Allow unfree packages
@@ -204,10 +221,12 @@
     rnote # note app
     zip
     unzip
+    zsh-powerlevel10k
   ];
 
   fonts.packages = with pkgs; [
     nerdfonts
+    meslo-lgs-nf
   ];
 
   # Some programs need SUID wrappers, can be configured further or are

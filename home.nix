@@ -25,6 +25,8 @@
   programs.alacritty = {
     enable = true;
     settings = {
+      shell.program = "zsh";
+
       window = {
         dimensions = {
           lines = 3;
@@ -56,6 +58,11 @@
     };
   };
 
+  programs.direnv = {
+    enable = true;
+    enableBashIntegration = true; # see note on other shells below
+    nix-direnv.enable = true;
+  };
   programs.waybar.enable = true;
   programs.ncspot.enable = true;
   programs.cava.enable = true;
