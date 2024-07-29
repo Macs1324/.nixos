@@ -161,6 +161,9 @@
   };
   programs.zsh = {
     enable = true;
+    shellInit = ''
+      neofetch
+    '';
     autosuggestions.enable = true;
     zsh-autoenv.enable = true;
     syntaxHighlighting.enable = true;
@@ -222,6 +225,7 @@
     zip
     unzip
     zsh-powerlevel10k
+    neofetch
   ];
 
   fonts.packages = with pkgs; [
