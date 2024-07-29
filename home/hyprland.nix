@@ -35,7 +35,7 @@
     windowManager.hyprland = {
       enable = true;
       plugins = [
-        hyprland-plugins.packages.${pkgs.system}.hyprbars
+        # hyprland-plugins.packages.${pkgs.system}.hy
       ];
       xwayland.enable = true;
       settings = {
