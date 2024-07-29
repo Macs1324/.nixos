@@ -181,6 +181,14 @@
     };
   };
   programs.nix-ld.enable = true;
+  programs.ssh = {
+    extraConfig = ''
+      Host uxs-sup
+        HostName 94.254.42.77
+        User uxstream
+        Port 44022
+    '';
+  };
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
@@ -226,6 +234,7 @@
     unzip
     zsh-powerlevel10k
     neofetch
+    bitwarden-desktop
   ];
 
   fonts.packages = with pkgs; [
