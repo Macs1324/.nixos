@@ -1,5 +1,6 @@
 {
-  inputs,
+  hyprland,
+  hyprland-plugins,
   config,
   pkgs,
   pc,
@@ -34,7 +35,7 @@
     windowManager.hyprland = {
       enable = true;
       plugins = [
-        inputs.hyprland-plugins.packages.${pkgs.system}.hyprbars
+        hyprland-plugins.packages.${pkgs.system}.hyprbars
       ];
       xwayland.enable = true;
       settings = {

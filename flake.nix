@@ -14,6 +14,8 @@
 
   outputs = {
     self,
+    hyprland,
+    hyprland-plugins,
     nixpkgs,
     home-manager,
     ...
@@ -43,7 +45,7 @@
         inherit pkgs;
         modules = [./home.nix];
         extraSpecialArgs = {
-          inherit pc;
+          inherit pc hyprland hyprland-plugins;
         };
       };
     };
