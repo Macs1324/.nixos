@@ -235,6 +235,7 @@
     zsh-powerlevel10k
     neofetch
     bitwarden-desktop
+    godot_4
   ];
 
   fonts.packages = with pkgs; [
