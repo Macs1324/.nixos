@@ -51,6 +51,7 @@
     LC_TELEPHONE = "sv_SE.UTF-8";
     LC_TIME = "sv_SE.UTF-8";
   };
+  hardware.uinput.enable = true;
   # Enable OpenGL
   hardware.graphics = {
     enable = true;
@@ -85,7 +86,7 @@
       nvidiaSettings = true;
 
       # Optionally, you may need to select the appropriate driver version for your specific GPU.
-      package = config.boot.kernelPackages.nvidiaPackages.production;
+      package = config.boot.kernelPackages.nvidiaPackages.stable;
     }
     else {};
 
@@ -138,6 +139,7 @@
   # Enable touchpad support (enabled default in most desktopManager).
   # services.xserver.libinput.enable = true;
 
+  users.groups.uinput = {};
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.macs = {
     isNormalUser = true;
