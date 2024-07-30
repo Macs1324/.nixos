@@ -116,10 +116,10 @@
               "$mod SHIFT, k, movewindow, u"
               "$mod SHIFT, l, movewindow, r"
               # Resize windows
-              "$mod CTRL, h, resizeactive, -30 0"
-              "$mod CTRL, j, resizeactive, 0 30"
-              "$mod CTRL, k, resizeactive, 0 -30"
-              "$mod CTRL, l, resizeactive, 30 0"
+              "$mod CTRL, h, resizeactive, -50 0"
+              "$mod CTRL, j, resizeactive, 0 50"
+              "$mod CTRL, k, resizeactive, 0 -50"
+              "$mod CTRL, l, resizeactive, 50 0"
             ]
             ++ (
               # workspaces
