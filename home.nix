@@ -27,7 +27,7 @@
     enable = true;
     theme = "Catppuccin-Mocha";
     settings = {
-      font_family = "JetBrainsMono Nerd Font Mono SemiBold";
+      font_family = "JetBrainsMono Nerd Font Mono";
       bold_font = "JetBrainsMono Nerd Font Mono Bold";
       italic_font = "JetBrainsMono Nerd Font Mono SemiBold Italic";
       bold_italic_font = "JetBrainsMono Nerd Font Mono Bold Italic";
