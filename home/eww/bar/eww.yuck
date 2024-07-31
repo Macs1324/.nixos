@@ -1,0 +1,33 @@
+;--------------------------------------------------------------
+|                                                             |
+|                         WIDGETS                             |
+|                                                             |
+;--------------------------------------------------------------
+(defwidget bar []
+  (box 
+     :orientation "v"
+     :space-evenly "false"
+     :spacing -15
+     (button :class "launcher_icon"
+         :onclick "scripts/"
+     )
+  )
+)
+
+;--------------------------------------------------------------
+|                                                             |
+|                         WINDOWS                             |
+|                                                             |
+;--------------------------------------------------------------
+(defwindow barwin
+  :geometry (geometry :x "0" 
+						:y "0" 
+						:height "100%" 
+						:width "47px")
+	:monitor 0
+	:reserve (struts :distance "35px" 
+					 :side "left")
+	:wm-ignore false
+	:hexpand "false"
+	:vexpand "false"
+)
