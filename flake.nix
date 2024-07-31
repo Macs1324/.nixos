@@ -10,6 +10,7 @@
       url = "github:hyprwm/hyprland-plugins";
       inputs.hyprland.follows = "hyprland";
     };
+    hyprcursor-phinger.url = "github:jappie3/hyprcursor-phinger";
   };
 
   outputs = {
@@ -18,6 +19,7 @@
     hyprland-plugins,
     nixpkgs,
     home-manager,
+    hyprcursor-phinger,
     ...
   }: let
     system = "x86_64-linux";
@@ -45,7 +47,7 @@
         inherit pkgs;
         modules = [./home.nix];
         extraSpecialArgs = {
-          inherit pc hyprland hyprland-plugins;
+          inherit pc hyprland hyprland-plugins hyprcursor-phinger;
         };
       };
     };

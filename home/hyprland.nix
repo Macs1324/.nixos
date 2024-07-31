@@ -61,6 +61,10 @@
         settings = {
           "$mod" = "SUPER";
           "$term" = "alacritty";
+          "env" = [
+            "HYPRCURSOR_THEME,phinger-cursors-light"
+            "HYPRCURSOR_SIZE,32"
+          ];
           monitor =
             if pc == "workdesktop"
             then [

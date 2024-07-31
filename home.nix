@@ -1,11 +1,13 @@
 {
   config,
   pkgs,
+  hyprcursor-phinger,
   ...
 }: {
   imports = [
     ./home/hyprland.nix
     ./home/eww.nix
+    hyprcursor-phinger.homeManagerModules.hyprcursor-phinger
   ];
   # Home Manager needs a bit of information about you and the
   # paths it should manage.
@@ -58,6 +60,13 @@
     };
   };
 
+  programs.hyprcursor-phinger.enable = true;
+  home.pointerCursor = {
+    name = "phinger-cursors-light";
+    package = pkgs.phinger-cursors;
+    size = 32;
+    gtk.enable = true;
+  };
   programs.direnv = {
     enable = true;
     enableBashIntegration = true; # see note on other shells below

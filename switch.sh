@@ -6,7 +6,7 @@ git add pc
 sudo nixos-rebuild switch --flake .#nixos &&
 home-manager switch --flake . &&
 
-git rm hardware-configuration.nix --cached
-git rm pc --cached
-rm hardware-configuration.nix
+git rm hardware-configuration.nix --cached &&
+git rm pc --cached &&
+rm hardware-configuration.nix &&
 lazygit
