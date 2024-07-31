@@ -202,7 +202,6 @@
     wget
     neovim
     gh
-    kitty
     alejandra
     emacs
     libnotify

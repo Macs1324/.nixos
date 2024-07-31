@@ -60,7 +60,7 @@
         };
         settings = {
           "$mod" = "SUPER";
-          "$term" = "alacritty";
+          "$term" = "kitty";
           "env" = [
             "HYPRCURSOR_THEME,phinger-cursors-light"
             "HYPRCURSOR_SIZE,32"
@@ -99,7 +99,7 @@
               "$mod SHIFT, V, layoutmsg, swapsplit"
               "CTRL ALT, L, exec, hyprlock"
               "$mod, A, togglespecialworkspace, notes"
-              "$mod CTRL, V, exec, alacritty --class clipse -e clipse"
+              "$mod CTRL, V, exec, $term --class clipse -e clipse"
               "${
                 if pc == "workdesktop" || pc == "worklaptop"
                 then "$mod, N, exec, cd ~/Code/uxstream/ && neovide --fork ."

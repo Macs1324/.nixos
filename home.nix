@@ -23,7 +23,38 @@
     enable = true;
     gitCredentialHelper.enable = true;
   };
+  programs.kitty = {
+    enable = true;
+    theme = "Catppuccin-Mocha";
+    settings = {
+      font_family = "JetBrainsMono Nerd Font Mono SemiBold";
+      bold_font = "JetBrainsMono Nerd Font Mono Bold";
+      italic_font = "JetBrainsMono Nerd Font Mono SemiBold Italic";
+      bold_italic_font = "JetBrainsMono Nerd Font Mono Bold Italic";
+      font_size = "13.0";
+      adjust_line_height = "120%";
+      disable_ligatures = "cursor";
 
+      allow_remote_control = true;
+      enable_audio_bell = false;
+      copy_on_select = true;
+      url_style = "single";
+
+      macos_option_as_alt = "left";
+
+      background_opacity = "0.4";
+    };
+    keybindings = {
+      "cmd+c" = "copy_to_clipboard";
+      "cmd+v" = "paste_from_clipboard";
+      "shift+insert" = "paste_from_clipboard";
+      "ctrl+shift+." = "next_tab";
+      "ctrl+shift+," = "previous_tab";
+      "ctrl+shift+right" = "move_tab_forward";
+      "ctrl+shift+left" = "move_tab_backward";
+      "ctrl+shift+'" = "set_tab_title";
+    };
+  };
   programs.alacritty = {
     enable = true;
     settings = {
