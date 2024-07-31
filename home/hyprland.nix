@@ -60,7 +60,7 @@
         };
         settings = {
           "$mod" = "SUPER";
-          "$term" = "kitty";
+          "$term" = "alacritty";
           "env" = [
             "HYPRCURSOR_THEME,phinger-cursors-light"
             "HYPRCURSOR_SIZE,32"
