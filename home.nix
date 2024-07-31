@@ -27,17 +27,13 @@
     enable = true;
     theme = "Catppuccin-Mocha";
     settings = {
-      font_family = "JetBrainsMono Nerd Font Mono";
-      bold_font = "JetBrainsMono Nerd Font Mono Bold";
-      italic_font = "JetBrainsMono Nerd Font Mono SemiBold Italic";
-      bold_italic_font = "JetBrainsMono Nerd Font Mono Bold Italic";
-      font_size = "13.0";
-      adjust_line_height = "120%";
-      disable_ligatures = "cursor";
+      font_family = "Hack Nerd Font Mono";
+      bold_font = "Hack Nerd Font Mono";
+      italic_font = "Hack Nerd Font Mono Italic";
+      bold_italic_font = "Hack Nerd Font Mono Italic";
+      font_size = "11.0";
 
-      allow_remote_control = true;
       enable_audio_bell = false;
-      copy_on_select = true;
       url_style = "single";
 
       macos_option_as_alt = "left";
