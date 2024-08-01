@@ -129,7 +129,7 @@
     alsa.support32Bit = true;
     pulse.enable = true;
     # If you want to use JACK applications, uncomment this
-    #jack.enable = true;
+    jack.enable = true;
 
     # use the example session manager (no others are packaged yet so this is enabled by default,
     # no need to redefine it in your config for now)
@@ -137,7 +137,7 @@
   };
 
   # Enable touchpad support (enabled default in most desktopManager).
-  # services.xserver.libinput.enable = true;
+  services.xserver.libinput.enable = true;
 
   users.groups.uinput = {};
   # Define a user account. Don't forget to set a password with ‘passwd’.
@@ -256,6 +256,7 @@
 
   # Enable the OpenSSH daemon.
   # services.openssh.enable = true;
+  services.udev.enable = true;
 
   # Open ports in the firewall.
   # networking.firewall.allowedTCPPorts = [ ... ];
