@@ -227,6 +227,7 @@
     google-chrome
     pavucontrol
     pulseaudio
+    wl-clipboard
     clipse
     neovide
     bacon
