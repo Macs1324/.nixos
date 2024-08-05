@@ -191,6 +191,7 @@
         Port 44022
     '';
   };
+  virtualisation.docker.enable = true;
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
@@ -238,6 +239,7 @@
     neofetch
     bitwarden-desktop
     godot_4
+    insomnia
   ];
 
   fonts.packages = with pkgs; [
