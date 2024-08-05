@@ -144,7 +144,7 @@
   users.users.macs = {
     isNormalUser = true;
     description = "Max Blank";
-    extraGroups = ["networkmanager" "wheel" "uinput" "video" "render"];
+    extraGroups = ["networkmanager" "wheel" "uinput" "video" "render" "docker"];
     packages = with pkgs; [
       kdePackages.kate
       #  thunderbird
