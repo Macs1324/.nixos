@@ -242,7 +242,8 @@
         # Current time
         {
           monitor = "";
-          text = ''cmd[update:1000] echo "<b><big> $(date +"%H:%M:%S") </big></b>"'';
+          # text = ''cmd[update:1000] echo "<b><big> $(date +"%H:%M:%S") </big></b>"'';
+          text = "brb :)";
           color = "rgb(248, 248, 242)"; # Default foreground color
           font_size = 64;
           font_family = "Sans"; # Default font
