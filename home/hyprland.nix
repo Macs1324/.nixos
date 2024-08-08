@@ -184,6 +184,21 @@
         ];
       };
     }
+    else if pc == "homedesktop"
+    then let
+      wallpaper = "~/.nixos/assets/wallpapers/homedesktop";
+    in {
+      enable = true;
+      settings = {
+        ipc = "on";
+        splash = "false";
+        preload = ["${wallpaper}-1.png" "${wallpaper}-2.png"];
+        wallpaper = [
+          "DP-2,${wallpaper}-1.png"
+          "HDMI-A-2,${wallpaper}-2.png"
+        ];
+      };
+    }
     else let
       wallpaper_path = "~/.nixos/assets/wallpapers/${pc}.png";
       display =
