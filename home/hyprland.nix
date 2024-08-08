@@ -71,7 +71,16 @@
               "DP-2, 3440x1440@165.00, 0x0, 1"
               "DP-1, 2560x1440@143.86, 3440x0, 1"
             ]
-            else [];
+            else
+              []
+              ++ (
+                if pc == "homedesktop"
+                then [
+                  "DP-2, 2560x1440@170.00, 0x0, 1"
+                  "HDMI-A-2, 1920x1080@60.00, 2560x0, 1"
+                ]
+                else []
+              );
           workspace =
             [
               "special:notes, on-created-empty:rnote"
