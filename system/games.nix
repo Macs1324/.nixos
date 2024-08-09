@@ -10,5 +10,6 @@
     discord
     webcord
     prismlauncher
+    spotify
   ];
 }
