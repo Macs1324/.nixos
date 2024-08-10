@@ -240,6 +240,7 @@
     bitwarden-desktop
     godot_4
     insomnia
+    inkscape-with-extensions
   ];
 
   fonts.packages = with pkgs; [
