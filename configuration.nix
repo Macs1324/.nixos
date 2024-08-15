@@ -241,6 +241,7 @@
     godot_4
     insomnia
     inkscape-with-extensions
+    xh
   ];
 
   fonts.packages = with pkgs; [
