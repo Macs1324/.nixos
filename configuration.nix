@@ -242,6 +242,7 @@
     insomnia
     inkscape-with-extensions
     xh
+    htop
   ];
 
   fonts.packages = with pkgs; [
