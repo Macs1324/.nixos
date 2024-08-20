@@ -13,11 +13,15 @@
       redis
     ]
     ++ (
-      if pc == "workdesktop"
-      then [
-        gpt4all-cuda
-      ]
-      else []
+      {
+        "workdesktop" = [
+          gpt4all-cuda
+        ];
+        "worklaptop" = [
+          discord
+        ];
+      }
+      .${pc}
     );
 
   services.redis.servers."uxstream" = {
