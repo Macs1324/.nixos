@@ -243,6 +243,7 @@
     inkscape-with-extensions
     xh
     htop
+    brave
   ];
 
   fonts.packages = with pkgs; [
