@@ -11,6 +11,7 @@
     [
       android-studio
       redis
+      sqlitebrowser
     ]
     ++ (
       {
