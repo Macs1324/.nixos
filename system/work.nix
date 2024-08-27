@@ -21,6 +21,8 @@
         "worklaptop" = [
           discord
         ];
+        "homedesktop" = [
+        ];
       }
       .${pc}
     );
