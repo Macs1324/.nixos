@@ -106,6 +106,7 @@
 
   # Enable the KDE Plasma Desktop Environment.
 
+  services.flatpak.enable = true;
   services.displayManager.sddm = {
     enable = true;
     wayland.enable = true;
