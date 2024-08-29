@@ -245,6 +245,7 @@
     xh
     htop
     brave
+    blender
   ];
 
   fonts.packages = with pkgs; [
