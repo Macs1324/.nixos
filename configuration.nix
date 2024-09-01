@@ -56,6 +56,17 @@
   hardware.graphics = {
     enable = true;
   };
+  hardware.opengl =
+    if pc == "homedesktop"
+    then {
+      enable = true;
+      driSupport32Bit = true;
+      extraPackages = with pkgs; [
+        rocmPackages.clr.icd
+      ];
+    }
+    else {};
+
   hardware.nvidia =
     if pc == "workdesktop"
     then {
