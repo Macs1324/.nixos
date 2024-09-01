@@ -246,6 +246,7 @@
     htop
     brave
     blender
+    krita
   ];
 
   fonts.packages = with pkgs; [
