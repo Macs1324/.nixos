@@ -258,6 +258,7 @@
     brave
     blender
     krita
+    openxr-loader
   ];
 
   fonts.packages = with pkgs; [
