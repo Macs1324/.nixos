@@ -259,8 +259,6 @@
     brave
     blender
     krita
-    openxr-loader
-    jdk17
   ];
 
   fonts.packages = with pkgs; [
