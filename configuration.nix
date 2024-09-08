@@ -259,6 +259,7 @@
     blender
     krita
     openxr-loader
+    jdk
   ];
 
   fonts.packages = with pkgs; [
