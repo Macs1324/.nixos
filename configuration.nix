@@ -165,6 +165,7 @@
 
   # Install firefox.
   programs.firefox.enable = true;
+  programs.java.enable = true;
   programs.hyprland.enable = true;
   programs.lazygit.enable = true;
   programs.git = {
