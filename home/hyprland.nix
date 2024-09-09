@@ -179,8 +179,8 @@
         splash = false;
         preload = ["${wallpaper}-1.jpg" "${wallpaper}-2.png"];
         wallpaper = [
-          "DP-2,${wallpaper}-2.jpg"
-          "DP-1,${wallpaper}-1.png"
+          "DP-2,${wallpaper}-2.png"
+          "DP-1,${wallpaper}-1.jpg"
         ];
       };
     }
