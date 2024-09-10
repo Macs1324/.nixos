@@ -53,19 +53,18 @@
   };
   hardware.uinput.enable = true;
   # Enable OpenGL
-  hardware.graphics = {
-    enable = true;
-  };
-  hardware.opengl =
+  hardware.graphics =
     if pc == "homedesktop"
     then {
       enable = true;
-      driSupport32Bit = true;
+      enable32Bit = true;
       extraPackages = with pkgs; [
         rocmPackages.clr.icd
       ];
     }
-    else {};
+    else {
+      enable = true;
+    };
 
   hardware.nvidia =
     if pc == "workdesktop"
@@ -149,7 +148,7 @@
   };
 
   # Enable touchpad support (enabled default in most desktopManager).
-  services.xserver.libinput.enable = true;
+  services.libinput.enable = true;
 
   users.groups.uinput = {};
   # Define a user account. Don't forget to set a password with ‘passwd’.
