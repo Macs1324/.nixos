@@ -202,6 +202,10 @@
         HostName 94.254.42.77
         User uxstream
         Port 44022
+      Host uxs-platonum-demo
+        HostName 192.168.1.56
+        user uxstream
+        Port 22
     '';
   };
   virtualisation.docker.enable = true;
@@ -259,6 +263,7 @@
     brave
     blender
     krita
+    bat
   ];
 
   fonts.packages = with pkgs; [
