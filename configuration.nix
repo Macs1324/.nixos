@@ -265,6 +265,7 @@
     krita
     bat
     lutris
+    bzip2
   ];
 
   fonts.packages = with pkgs; [
