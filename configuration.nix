@@ -266,6 +266,7 @@
     bat
     lutris
     bzip2
+    libadwaita
   ];
 
   fonts.packages = with pkgs; [
