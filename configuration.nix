@@ -264,6 +264,7 @@
     blender
     krita
     bat
+    lutris
   ];
 
   fonts.packages = with pkgs; [
