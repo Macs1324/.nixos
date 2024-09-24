@@ -11,6 +11,7 @@
       inputs.hyprland.follows = "hyprland";
     };
     hyprcursor-phinger.url = "github:jappie3/hyprcursor-phinger";
+    zen-browser.url = "github:MarceColl/zen-browser-flake";
   };
 
   outputs = {
@@ -20,6 +21,7 @@
     nixpkgs,
     home-manager,
     hyprcursor-phinger,
+    zen-browser,
     ...
   }: let
     system = "x86_64-linux";
@@ -38,7 +40,7 @@
         inherit system;
         modules = [./configuration.nix];
         specialArgs = {
-          inherit pc;
+          inherit pc zen-browser;
         };
       };
     };

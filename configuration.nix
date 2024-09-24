@@ -5,6 +5,7 @@
   config,
   pkgs,
   pc,
+  zen-browser,
   pcs,
   ...
 }: {
@@ -116,7 +117,6 @@
 
   # Enable the KDE Plasma Desktop Environment.
 
-  services.flatpak.enable = true;
   services.displayManager.sddm = {
     enable = true;
     wayland.enable = true;
@@ -267,6 +267,7 @@
     lutris
     bzip2
     libadwaita
+    zen-browser.packages."${system}".specific
   ];
 
   fonts.packages = with pkgs; [
