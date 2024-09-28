@@ -268,6 +268,7 @@
     bzip2
     libadwaita
     zen-browser.packages."${system}".specific
+    gimp
   ];
 
   fonts.packages = with pkgs; [
