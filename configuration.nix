@@ -178,6 +178,7 @@
     enable = true;
     shellInit = ''
       neofetch
+      alias nd="nix develop"
     '';
     autosuggestions.enable = true;
     zsh-autoenv.enable = true;
