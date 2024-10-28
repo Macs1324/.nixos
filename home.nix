@@ -54,7 +54,7 @@
   programs.alacritty = {
     enable = true;
     settings = {
-      shell.program = "zsh";
+      terminal.shell.program = "zsh";
 
       window = {
         dimensions = {
