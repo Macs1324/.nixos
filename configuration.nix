@@ -278,6 +278,7 @@
     libadwaita
     zen-browser.packages."${system}".specific
     gimp
+    pgadmin
   ];
 
   fonts.packages = with pkgs; [
