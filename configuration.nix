@@ -270,7 +270,7 @@
     xh
     htop
     brave
-    blender
+    # blender
     krita
     bat
     lutris
