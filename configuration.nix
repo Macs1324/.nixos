@@ -279,6 +279,7 @@
     zen-browser.packages."${system}".specific
     gimp
     pgadmin
+    obs-studio
   ];
 
   fonts.packages = with pkgs; [
