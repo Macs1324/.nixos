@@ -284,6 +284,7 @@
   fonts.packages = with pkgs; [
     nerdfonts
     meslo-lgs-nf
+    inter
   ];
 
   # Some programs need SUID wrappers, can be configured further or are
