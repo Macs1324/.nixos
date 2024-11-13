@@ -280,6 +280,8 @@
     gimp
     pgadmin
     obs-studio
+    grim
+    slurp
   ];
 
   fonts.packages = with pkgs; [

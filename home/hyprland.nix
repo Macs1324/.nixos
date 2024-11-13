@@ -107,6 +107,7 @@
               "$mod, C, killactive"
               "$mod, P, pseudo"
               "$mod, V, layoutmsg, togglesplit"
+              "$mod SHIFT, S, exec, grim -g \"$(slurp)\" - | wl-copy"
               "$mod SHIFT, V, layoutmsg, swapsplit"
               "CTRL ALT, L, exec, hyprlock"
               "$mod, A, togglespecialworkspace, notes"
