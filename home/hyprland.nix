@@ -42,7 +42,7 @@
         decoration = {
           rounding = 10;
           inactive_opacity = 0.85;
-          drop_shadow = true;
+          # drop_shadow = true;
         };
         misc = {
           disable_splash_rendering = true;
