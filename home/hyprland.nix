@@ -35,14 +35,12 @@
     windowManager.hyprland = {
       enable = true;
       plugins = [
-        # hyprland-plugins.packages.${pkgs.system}.hy
       ];
       xwayland.enable = true;
       settings = {
         decoration = {
           rounding = 10;
           inactive_opacity = 0.85;
-          # drop_shadow = true;
         };
         misc = {
           disable_splash_rendering = true;
