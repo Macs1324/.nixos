@@ -255,7 +255,7 @@
     pulseaudio
     wl-clipboard
     clipse
-    neovide
+    # neovide
     bacon
     rnote # note app
     zip

@@ -101,7 +101,7 @@
   };
   programs.waybar.enable = true;
   programs.ncspot.enable = true;
-  programs.cava.enable = true;
+  # programs.cava.enable = true;
 
   programs.bash = {
     enable = true;
