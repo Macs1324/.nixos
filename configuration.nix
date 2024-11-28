@@ -269,6 +269,8 @@
     grim
     slurp
     vlc
+    git-lfs
+    gource
   ];
 
   fonts.packages = with pkgs; [
