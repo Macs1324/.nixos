@@ -271,6 +271,7 @@
     vlc
     git-lfs
     gource
+    go
   ];
 
   fonts.packages = with pkgs; [
