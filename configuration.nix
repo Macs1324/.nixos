@@ -275,7 +275,10 @@
   ];
 
   fonts.packages = with pkgs; [
-    nerdfonts
+    nerd-fonts.fira-code
+    nerd-fonts.hack
+    nerd-fonts.ubuntu-mono
+    nerd-fonts.jetbrains-mono
     meslo-lgs-nf
     inter
   ];
