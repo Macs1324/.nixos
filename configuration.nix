@@ -251,6 +251,7 @@
     neofetch
     bitwarden-desktop
     godot_4
+    godot_4-export-templates
     insomnia
     inkscape-with-extensions
     xh
