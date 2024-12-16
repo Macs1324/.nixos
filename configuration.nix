@@ -158,7 +158,7 @@
   users.users.macs = {
     isNormalUser = true;
     description = "Max Blank";
-    extraGroups = ["networkmanager" "wheel" "uinput" "video" "render" "docker" "plugdev"];
+    extraGroups = ["networkmanager" "wheel" "uinput" "video" "render" "docker" "plugdev" "seat"];
     packages = with pkgs; [
       kdePackages.kate
       #  thunderbird
@@ -296,6 +296,7 @@
 
   # Enable the OpenSSH daemon.
   # services.openssh.enable = true;
+  services.seatd.enable = true;
   services.udev = {
     enable = true;
     extraRules = ''
