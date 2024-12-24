@@ -273,6 +273,7 @@
     git-lfs
     gource
     go
+    audacity
   ];
 
   fonts.packages = with pkgs; [
