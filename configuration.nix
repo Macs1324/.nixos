@@ -274,6 +274,7 @@
     gource
     go
     audacity
+    zed-editor
   ];
 
   fonts.packages = with pkgs; [
