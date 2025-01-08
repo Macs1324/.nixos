@@ -115,10 +115,9 @@
   #   xkb.variant = "";
   # };
 
-  # Enable the KDE Plasma Desktop Environment.
-  services.desktopManager.plasma6.enable = true;
-  services.displayManager.sddm.enable = true;
-  services.displayManager.sddm.wayland.enable = true;
+  # Enable the GNOME Desktop Environment.
+  services.xserver.desktopManager.gnome.enable = true;
+  services.xserver.displayManager.gdm.enable = true;
 
   # Configure keymap in X11
 
@@ -218,64 +217,68 @@
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
-  environment.systemPackages = with pkgs; [
-    vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
-    wget
-    neovim
-    gh
-    alejandra
-    emacs
-    libnotify
-    nodejs
-    # Emacs / editor utils
-    ripgrep
-    fd
-    shellcheck
-    rustup
-    python3
-    zig
-    gcc
-    xdg-desktop-portal-hyprland
-    google-chrome
-    pavucontrol
-    pulseaudio
-    wl-clipboard
-    clipse
-    neovide
-    bacon
-    rnote # note app
-    zip
-    unzip
-    zsh-powerlevel10k
-    libreoffice
-    neofetch
-    bitwarden-desktop
-    godot_4
-    godot_4-export-templates
-    insomnia
-    inkscape-with-extensions
-    xh
-    htop
-    brave
-    blender
-    krita
-    bat
-    lutris
-    bzip2
-    libadwaita
-    zen-browser.packages."${system}".specific
-    gimp
-    pgadmin
-    obs-studio
-    grim
-    slurp
-    vlc
-    git-lfs
-    gource
-    go
-    audacity
-    zed-editor
-  ];
+  environment.systemPackages = with pkgs;
+    [
+      vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
+      wget
+      neovim
+      gh
+      alejandra
+      emacs
+      libnotify
+      nodejs
+      # Emacs / editor utils
+      ripgrep
+      fd
+      shellcheck
+      rustup
+      python3
+      zig
+      gcc
+      xdg-desktop-portal-hyprland
+      google-chrome
+      pavucontrol
+      pulseaudio
+      wl-clipboard
+      clipse
+      neovide
+      bacon
+      rnote # note app
+      zip
+      unzip
+      zsh-powerlevel10k
+      libreoffice
+      neofetch
+      bitwarden-desktop
+      godot_4
+      godot_4-export-templates
+      insomnia
+      inkscape-with-extensions
+      xh
+      htop
+      brave
+      blender
+      krita
+      bat
+      lutris
+      bzip2
+      libadwaita
+      zen-browser.packages."${system}".specific
+      gimp
+      pgadmin
+      obs-studio
+      grim
+      slurp
+      vlc
+      git-lfs
+      gource
+      go
+      audacity
+      zed-editor
+    ]
+    ++ [
+      pkgs.gnomeExtensions.pop-shell
+    ];
 
   fonts.packages = with pkgs; [
     nerd-fonts.fira-code
