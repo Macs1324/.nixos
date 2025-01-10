@@ -277,7 +277,7 @@
       zed-editor
     ]
     ++ [
-      # pkgs.gnomeExtensions.pop-shell
+      pkgs.gnomeExtensions.pop-shell
     ];
 
   fonts.packages = with pkgs; [
