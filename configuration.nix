@@ -263,7 +263,7 @@
     lutris
     bzip2
     libadwaita
-    zen-browser.packages."${system}".specific
+    zen-browser.packages."${system}".default
     gimp
     pgadmin
     obs-studio

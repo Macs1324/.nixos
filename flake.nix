@@ -12,7 +12,7 @@
     };
     hyprland-qtutils.url = "github:hyprwm/hyprland-qtutils";
     hyprcursor-phinger.url = "github:jappie3/hyprcursor-phinger";
-    zen-browser.url = "github:MarceColl/zen-browser-flake";
+    zen-browser.url = "github:0xc000022070/zen-browser-flake";
   };
 
   outputs = {
