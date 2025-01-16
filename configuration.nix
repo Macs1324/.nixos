@@ -276,6 +276,7 @@
     audacity
     zed-editor
     linuxHeaders
+    sqlite
   ];
 
   fonts.packages = with pkgs; [
