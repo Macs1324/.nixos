@@ -275,6 +275,7 @@
     go
     audacity
     zed-editor
+    linuxHeaders
   ];
 
   fonts.packages = with pkgs; [
