@@ -51,6 +51,7 @@
         };
         exec-once = [
           "waybar"
+          "hyprpaper"
           "exec-once = clipse -listen"
         ];
         dwindle = {
