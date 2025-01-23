@@ -277,6 +277,7 @@
     zed-editor
     linuxHeaders
     sqlite
+    hyprpaper
   ];
 
   fonts.packages = with pkgs; [
