@@ -100,12 +100,16 @@
       package = config.boot.kernelPackages.nvidiaPackages.stable;
     }
     else {};
-
   # Load nvidia driver for Xorg and Wayland
   services.xserver.videoDrivers =
     if pc == "workdesktop"
     then ["nvidia"]
     else ["modesetting" "fbdev"];
+
+  boot.initrd.kernelModules =
+    if pc == "homedesktop"
+    then ["amdgpu"]
+    else [];
 
   # Enable the X11 windowing system.
   # You can disable this if you're only using the Wayland session.
