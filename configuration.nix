@@ -278,6 +278,7 @@
     linuxHeaders
     sqlite
     hyprpaper
+    diesel-cli
   ];
 
   fonts.packages = with pkgs; [
