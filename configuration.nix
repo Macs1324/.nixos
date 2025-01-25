@@ -111,6 +111,17 @@
     then ["amdgpu"]
     else [];
 
+  systemd.tmpfiles.rules =
+    if pc == "homedesktop"
+    then [
+      "L+    /opt/rocm/hip   -    -    -     -    ${pkgs.rocmPackages.clr}"
+    ]
+    else [];
+  hardware.opengl.extraPackages =
+    if pc == "homedesktop"
+    then with pkgs; [rocmPackages.clr.icd]
+    else [];
+
   # Enable the X11 windowing system.
   # You can disable this if you're only using the Wayland session.
   # services.xserver.enable = true;
@@ -283,6 +294,7 @@
     sqlite
     hyprpaper
     diesel-cli
+    clinfo
   ];
 
   fonts.packages = with pkgs; [
