@@ -8,6 +8,7 @@
   imports = [
     ./home/hyprland.nix
     ./home/eww.nix
+    ./home/waybar.nix
     hyprcursor-phinger.homeManagerModules.hyprcursor-phinger
   ];
   # Home Manager needs a bit of information about you and the
@@ -100,7 +101,6 @@
     enableBashIntegration = true; # see note on other shells below
     nix-direnv.enable = true;
   };
-  programs.waybar.enable = true;
   programs.ncspot.enable = true;
   # programs.cava.enable = true;
 
