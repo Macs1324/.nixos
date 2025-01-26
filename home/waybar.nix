@@ -14,7 +14,7 @@
         position = "left";
         width = 30;
 
-        modules-left = ["hyprland/workspaces"];
+        modules-center = ["hyprland/workspaces"];
         modules-right = ["clock"];
 
         "hyprland/workspaces" = {
@@ -33,6 +33,10 @@
             "active" = "";
             "default" = "";
           };
+        };
+
+        "clock" = {
+          "format" = "{:%H\n%M}";
         };
       };
     };
