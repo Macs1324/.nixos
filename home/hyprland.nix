@@ -175,7 +175,7 @@
     then let
       wallpaper = "~/.nixos/assets/wallpapers/workdesktop";
     in {
-      # enable = true;
+      enable = true;
       settings = {
         ipc = "on";
         splash = false;
@@ -190,7 +190,7 @@
     then let
       wallpaper = "~/.nixos/assets/wallpapers/homedesktop";
     in {
-      # enable = true;
+      enable = true;
       settings = {
         ipc = "on";
         splash = "false";
@@ -208,7 +208,7 @@
         then "eDP-1"
         else "DP-2";
     in {
-      # enable = true;
+      enable = true;
       settings = {
         ipc = "on";
         splash = false;
