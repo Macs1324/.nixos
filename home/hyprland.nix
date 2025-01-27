@@ -39,7 +39,7 @@
       xwayland.enable = true;
       settings = {
         decoration = {
-          rounding = 10;
+          rounding = 0;
           inactive_opacity = 0.85;
         };
         misc = {
