@@ -295,6 +295,7 @@
     hyprpaper
     diesel-cli
     clinfo
+    jq
   ];
 
   fonts.packages = with pkgs; [
