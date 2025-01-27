@@ -38,6 +38,10 @@
       ];
       xwayland.enable = true;
       settings = {
+        general = {
+          gaps_in = 3;
+          gaps_out = 5;
+        };
         decoration = {
           rounding = 0;
           inactive_opacity = 0.85;
