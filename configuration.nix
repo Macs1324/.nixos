@@ -296,6 +296,7 @@
     diesel-cli
     clinfo
     jq
+    gnumake
   ];
 
   fonts.packages = with pkgs; [
