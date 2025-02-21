@@ -293,7 +293,6 @@
     linuxHeaders
     sqlite
     hyprpaper
-    diesel-cli
     clinfo
     jq
     gnumake
