@@ -131,6 +131,10 @@
     };
   };
 
+  home.sessionPath = [
+    "$HOME/.npm-global/bin"
+  ];
+
   home.packages = [
     hyprland-qtutils.packages."${pkgs.system}".default
   ];
