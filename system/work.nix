@@ -16,7 +16,6 @@
     ++ (
       {
         "workdesktop" = [
-          gpt4all-cuda
         ];
         "worklaptop" = [
           discord
