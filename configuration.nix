@@ -101,11 +101,17 @@
       package = config.boot.kernelPackages.nvidiaPackages.stable;
     }
     else {};
+
   # Load nvidia driver for Xorg and Wayland
   services.xserver.videoDrivers =
     if pc == "workdesktop"
     then ["nvidia"]
-    else ["modesetting" "fbdev"];
+    else [
+      "modesetting"
+      /*
+      "fbdev"
+      */
+    ];
 
   boot.initrd.kernelModules =
     if pc == "homedesktop"
