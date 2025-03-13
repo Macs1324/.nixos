@@ -6,10 +6,6 @@
     home-manager.url = "github:nix-community/home-manager/master";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     hyprland.url = "github:hyprwm/Hyprland";
-    hyprland-plugins = {
-      url = "github:hyprwm/hyprland-plugins";
-      inputs.hyprland.follows = "hyprland";
-    };
     hyprland-qtutils.url = "github:hyprwm/hyprland-qtutils";
     hyprcursor-phinger.url = "github:jappie3/hyprcursor-phinger";
     zen-browser.url = "github:0xc000022070/zen-browser-flake";
@@ -18,7 +14,6 @@
   outputs = {
     self,
     hyprland,
-    hyprland-plugins,
     hyprland-qtutils,
     nixpkgs,
     home-manager,
@@ -42,7 +37,7 @@
         inherit system;
         modules = [./configuration.nix];
         specialArgs = {
-          inherit pc zen-browser;
+          inherit pc zen-browser hyprland;
         };
       };
     };
@@ -51,7 +46,7 @@
         inherit pkgs;
         modules = [./home.nix];
         extraSpecialArgs = {
-          inherit pc hyprland hyprland-plugins hyprcursor-phinger hyprland-qtutils;
+          inherit pc hyprland hyprcursor-phinger hyprland-qtutils;
         };
       };
     };

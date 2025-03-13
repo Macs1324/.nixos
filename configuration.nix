@@ -6,6 +6,7 @@
   pkgs,
   pc,
   zen-browser,
+  hyprland,
   pcs,
   ...
 }: {
@@ -183,7 +184,11 @@
   # Install firefox.
   programs.firefox.enable = true;
   programs.java.enable = true;
-  programs.hyprland.enable = true;
+  programs.hyprland = {
+    enable = true;
+    package = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
+    portalPackage = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
+  };
   programs.lazygit.enable = true;
   programs.git = {
     enable = true;
@@ -250,7 +255,6 @@
     python3
     zig
     gcc
-    xdg-desktop-portal-hyprland
     google-chrome
     pavucontrol
     pulseaudio
@@ -361,7 +365,12 @@
   # networking.firewall.allowedUDPPorts = [ ... ];
   # Or disable the firewall altogether.
   networking.firewall.enable = false;
-  nix.settings.experimental-features = ["nix-command" "flakes"];
+  nix.settings = {
+    experimental-features = ["nix-command" "flakes"];
+
+    substituters = ["https://hyprland.cachix.org"];
+    trusted-public-keys = ["hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="];
+  };
   # This value determines the NixOS release from which the default
   # settings for stateful data, like file locations and database versions
   # on your system were taken. It‘s perfectly fine and recommended to leave

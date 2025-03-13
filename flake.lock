@@ -197,36 +197,6 @@
         "type": "github"
       }
     },
-    "hyprland-plugins": {
-      "inputs": {
-        "hyprland": [
-          "hyprland"
-        ],
-        "nixpkgs": [
-          "hyprland-plugins",
-          "hyprland",
-          "nixpkgs"
-        ],
-        "systems": [
-          "hyprland-plugins",
-          "hyprland",
-          "systems"
-        ]
-      },
-      "locked": {
-        "lastModified": 1738966025,
-        "narHash": "sha256-MzgrF0jKlTNnNS33D8PwI5z2MJ1Tzf5MQVf/oms2pdw=",
-        "owner": "hyprwm",
-        "repo": "hyprland-plugins",
-        "rev": "4f48dbe12f3cbbeb4d31c91c67b21edbc5b4b451",
-        "type": "github"
-      },
-      "original": {
-        "owner": "hyprwm",
-        "repo": "hyprland-plugins",
-        "type": "github"
-      }
-    },
     "hyprland-protocols": {
       "inputs": {
         "nixpkgs": [
@@ -614,7 +584,6 @@
         "home-manager": "home-manager",
         "hyprcursor-phinger": "hyprcursor-phinger",
         "hyprland": "hyprland",
-        "hyprland-plugins": "hyprland-plugins",
         "hyprland-qtutils": "hyprland-qtutils_2",
         "nixpkgs": "nixpkgs_4",
         "zen-browser": "zen-browser"
