@@ -200,9 +200,9 @@
       settings = {
         ipc = "on";
         splash = "false";
-        preload = ["${wallpaper}-1.png" "${wallpaper}-2.jpg"];
+        preload = ["${wallpaper}-1.jpg" "${wallpaper}-2.jpg"];
         wallpaper = [
-          "DP-2,${wallpaper}-1.png"
+          "DP-2,${wallpaper}-1.jpg"
           "HDMI-A-2,${wallpaper}-2.jpg"
         ];
       };
