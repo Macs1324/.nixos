@@ -307,6 +307,7 @@
     jq
     gnumake
     podman
+    podman-compose
   ];
 
   fonts.packages = with pkgs; [
