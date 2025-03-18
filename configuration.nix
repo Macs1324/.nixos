@@ -306,6 +306,7 @@
     clinfo
     jq
     gnumake
+    podman
   ];
 
   fonts.packages = with pkgs; [
