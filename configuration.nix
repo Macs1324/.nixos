@@ -299,7 +299,7 @@
     gource
     go
     audacity
-    zed-editor
+    # zed-editor
     linuxHeaders
     sqlite
     hyprpaper

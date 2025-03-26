@@ -101,7 +101,7 @@
     enableBashIntegration = true; # see note on other shells below
     nix-direnv.enable = true;
   };
-  programs.ncspot.enable = true;
+  # programs.ncspot.enable = true;
   # programs.cava.enable = true;
 
   programs.bash = {
