@@ -169,8 +169,8 @@
             "ease,0.33, 1, 0.68, 1"
           ];
           animation = [
-            "workspaces,1,3,ease,slidevert"
-            "windows,1,3.5,overshot,slide"
+            "workspaces,1,2.5,ease,slidefadevert"
+            "windows,1,3.0,overshot,gnomed"
           ];
         };
       };
