@@ -108,7 +108,7 @@
     enable = true;
     settings = {
       theme = "catppuccin-mocha";
-      font-size = 11;
+      font-size = 14;
       background-opacity = 0.8;
       gtk-single-instance = true;
     };
