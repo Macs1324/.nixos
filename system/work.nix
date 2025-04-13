@@ -23,7 +23,9 @@
         "homedesktop" = [
         ];
       }
-      .${pc}
+      .${
+        pc
+      }
     );
 
   services.redis.servers."uxstream" = {

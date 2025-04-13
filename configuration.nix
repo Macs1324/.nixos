@@ -20,7 +20,9 @@
       "workdesktop" = [./system/work.nix];
       "worklaptop" = [./system/work.nix];
     }
-    .${pc};
+    .${
+      pc
+    };
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
