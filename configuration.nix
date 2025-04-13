@@ -19,8 +19,7 @@
       "homedesktop" = [./system/games.nix ./system/work.nix];
       "workdesktop" = [./system/work.nix];
       "worklaptop" = [./system/work.nix];
-    }
-    .${
+    }.${
       pc
     };
 
@@ -311,6 +310,14 @@
     podman
     podman-compose
   ];
+
+  environment.variables = {
+    # Set the default editor for the system
+    EDITOR = "nvim";
+    VISUAL = "nvim";
+    GIT_EDITOR = "nvim";
+    SHELL = "zsh";
+  };
 
   fonts.packages = with pkgs; [
     nerd-fonts.fira-code
