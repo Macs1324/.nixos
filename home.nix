@@ -104,6 +104,15 @@
   # programs.ncspot.enable = true;
   # programs.cava.enable = true;
 
+  programs.ghostty = {
+    enable = true;
+    settings = {
+      theme = "catppuccin-mocha";
+      font-size = 11;
+      background-opacity = 0.8;
+    };
+  };
+
   programs.bash = {
     enable = true;
     bashrcExtra = ''
