@@ -110,6 +110,7 @@
       theme = "catppuccin-mocha";
       font-size = 11;
       background-opacity = 0.8;
+      gtk-single-instance = true;
     };
   };
 
