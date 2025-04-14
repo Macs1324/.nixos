@@ -19,7 +19,8 @@
       "homedesktop" = [./system/games.nix ./system/work.nix];
       "workdesktop" = [./system/work.nix];
       "worklaptop" = [./system/work.nix];
-    }.${
+    }
+    .${
       pc
     };
 
