@@ -275,7 +275,7 @@
     zip
     unzip
     zsh-powerlevel10k
-    libreoffice
+    libreoffice-fresh
     neofetch
     bitwarden-desktop
     godot_4
