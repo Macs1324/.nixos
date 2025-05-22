@@ -313,6 +313,7 @@
     gnumake
     podman
     podman-compose
+    flatpak
   ];
 
   environment.variables = {
