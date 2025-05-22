@@ -276,6 +276,8 @@
     unzip
     zsh-powerlevel10k
     libreoffice-fresh
+    ffmpeg
+    gst_all_1.gstreamer
     neofetch
     bitwarden-desktop
     godot_4
