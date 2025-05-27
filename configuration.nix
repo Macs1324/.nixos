@@ -248,71 +248,88 @@
   # List packages installed in system profile. To search, run:
   # $ nix search wget
   environment.systemPackages = with pkgs; [
-    vim # Do not forget to add an editor to edit configuration.nix! The Nano editor is also installed by default.
+    # Basic utilities
     wget
-    neovim
     gh
-    alejandra
-    emacs
-    libnotify
-    nodejs
-    # Emacs / editor utils
-    ripgrep
-    fd
-    shellcheck
-    rustup
-    python3
-    zig
-    gcc
-    google-chrome
     pavucontrol
-    pulseaudio
-    wl-clipboard
-    clipse
-    neovide
-    bacon
     rnote # note app
     zip
     unzip
-    zsh-powerlevel10k
-    ffmpeg
-    gst_all_1.gstreamer
     neofetch
     bitwarden-desktop
-    godot_4
-    godot_4-export-templates
-    insomnia
-    inkscape-with-extensions
-    xh
-    htop
-    brave
-    blender
-    krita
-    bat
-    lutris
     bzip2
-    libadwaita
-    zen-browser.packages."${system}".default
-    gimp
-    pgadmin
     obs-studio
+    vlc
+    hyprpaper
+    flatpak
+
+    # Libraries and dependencies
+    libnotify
+    pulseaudio
+    wl-clipboard
     grim
     slurp
-    vlc
-    git-lfs
-    gource
-    go
-    audacity
-    # zed-editor
+    clipse
+    libadwaita
     linuxHeaders
-    sqlite
-    hyprpaper
     clinfo
+
+    # Programming languages 
+    nodejs
+    rustup
+    python3
+    zig
+    julia
+    gcc
+    go
+    sqlite
+
+    # Editors
+    vim 
+    neovim
+    neovide
+    emacs
+
+
+    # CLI Tools
+    alejandra
+    ripgrep
+    fd
+    zsh-powerlevel10k
+    shellcheck
+    bacon
+    ffmpeg
+    gst_all_1.gstreamer
+    xh
+    htop
+    bat
     jq
     gnumake
     podman
     podman-compose
-    flatpak
+
+    # Browsers
+    google-chrome
+    brave
+    zen-browser.packages."${system}".default
+
+    # Creative tools
+    blender
+    inkscape-with-extensions
+    godot_4
+    godot_4-export-templates-bin
+    krita
+    gimp
+    audacity
+
+    # Gaming
+    lutris
+
+    # Dev tools
+    pgadmin
+    insomnia
+    git-lfs
+    gource
   ];
 
   environment.variables = {
