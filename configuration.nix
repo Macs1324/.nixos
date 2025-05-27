@@ -274,7 +274,7 @@
     linuxHeaders
     clinfo
 
-    # Programming languages 
+    # Programming languages
     nodejs
     rustup
     python3
@@ -285,11 +285,10 @@
     sqlite
 
     # Editors
-    vim 
+    vim
     neovim
     neovide
     emacs
-
 
     # CLI Tools
     alejandra
