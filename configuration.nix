@@ -19,8 +19,7 @@
       "homedesktop" = [./system/games.nix ./system/work.nix];
       "workdesktop" = [./system/work.nix];
       "worklaptop" = [./system/work.nix];
-    }
-    .${
+    }.${
       pc
     };
 
@@ -289,6 +288,7 @@
     neovim
     neovide
     emacs
+    zed-editor
 
     # CLI Tools
     alejandra
