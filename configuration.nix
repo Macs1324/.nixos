@@ -125,10 +125,6 @@
       "L+    /opt/rocm/hip   -    -    -     -    ${pkgs.rocmPackages.clr}"
     ]
     else [];
-  hardware.opengl.extraPackages =
-    if pc == "homedesktop"
-    then with pkgs; [rocmPackages.clr.icd]
-    else [];
 
   # Enable the X11 windowing system.
   # You can disable this if you're only using the Wayland session.
@@ -149,7 +145,7 @@
   services.printing.enable = true;
 
   # Enable sound with pipewire.
-  hardware.pulseaudio.enable = false;
+  services.pulseaudio.enable = false;
   security.rtkit.enable = true;
   services.pipewire = {
     enable = true;
