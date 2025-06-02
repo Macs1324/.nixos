@@ -285,6 +285,7 @@
     neovide
     emacs
     zed-editor
+    code-cursor
 
     # CLI Tools
     alejandra
