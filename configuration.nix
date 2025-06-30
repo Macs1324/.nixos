@@ -303,6 +303,7 @@
     gnumake
     podman
     podman-compose
+    viu
 
     # Browsers
     google-chrome
