@@ -203,7 +203,7 @@
   programs.zsh = {
     enable = true;
     shellInit = ''
-      neofetch
+      fastfetch
       alias nd="nix develop"
     '';
     autosuggestions.enable = true;
@@ -250,7 +250,6 @@
     rnote # note app
     zip
     unzip
-    neofetch
     bitwarden-desktop
     bzip2
     obs-studio
