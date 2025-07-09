@@ -25,34 +25,6 @@
     enable = true;
     gitCredentialHelper.enable = true;
   };
-  programs.kitty = {
-    enable = true;
-    theme = "Catppuccin-Mocha";
-    settings = {
-      font_family = "Hack Nerd Font Mono";
-      bold_font = "Hack Nerd Font Mono";
-      italic_font = "Hack Nerd Font Mono Italic";
-      bold_italic_font = "Hack Nerd Font Mono Italic";
-      font_size = "11.0";
-
-      enable_audio_bell = false;
-      url_style = "single";
-
-      macos_option_as_alt = "left";
-
-      background_opacity = "0.4";
-    };
-    keybindings = {
-      "cmd+c" = "copy_to_clipboard";
-      "cmd+v" = "paste_from_clipboard";
-      "shift+insert" = "paste_from_clipboard";
-      "ctrl+shift+." = "next_tab";
-      "ctrl+shift+," = "previous_tab";
-      "ctrl+shift+right" = "move_tab_forward";
-      "ctrl+shift+left" = "move_tab_backward";
-      "ctrl+shift+'" = "set_tab_title";
-    };
-  };
   programs.alacritty = {
     enable = true;
     settings = {
@@ -107,10 +79,39 @@
   programs.ghostty = {
     enable = true;
     settings = {
-      theme = "catppuccin-mocha";
+      theme = "rose-pine";
       font-size = 14;
-      background-opacity = 0.8;
+      background-opacity = 0.78;
       gtk-single-instance = true;
+    };
+
+    themes = {
+      rose-pine = {
+        background = "191724";
+        cursor-color = "e0def4";
+        cursor-text = "191724";
+        foreground = "e0def4";
+        palette = [
+          "0=#26233a"
+          "1=#eb6f92"
+          "2=#31748f"
+          "3=#f6c177"
+          "4=#9ccfd8"
+          "5=#c4a7e7"
+          "6=#ebbcba"
+          "7=#e0def4"
+          "8=#6e6a86"
+          "9=#eb6f92"
+          "10=#31748f"
+          "11=#f6c177"
+          "12=#9ccfd8"
+          "13=#c4a7e7"
+          "14=#ebbcba"
+          "15=#e0def4"
+        ];
+        selection-background = "403d52";
+        selection-foreground = "e0def4";
+      };
     };
   };
 
