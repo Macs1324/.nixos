@@ -9,6 +9,10 @@
     hyprland-qtutils.url = "github:hyprwm/hyprland-qtutils";
     hyprcursor-phinger.url = "github:jappie3/hyprcursor-phinger";
     zen-browser.url = "github:0xc000022070/zen-browser-flake";
+    stylix = {
+      url = "github:danth/stylix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = {
@@ -19,6 +23,7 @@
     home-manager,
     hyprcursor-phinger,
     zen-browser,
+    stylix,
     ...
   }: let
     system = "x86_64-linux";
@@ -35,7 +40,10 @@
     nixosConfigurations = {
       nixos = lib.nixosSystem {
         inherit system;
-        modules = [./configuration.nix];
+        modules = [
+          stylix.nixosModules.stylix
+          ./configuration.nix
+        ];
         specialArgs = {
           inherit pc zen-browser hyprland;
         };
@@ -44,7 +52,10 @@
     homeConfigurations = {
       macs = home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
-        modules = [./home.nix];
+        modules = [
+          stylix.homeModules.stylix
+          ./home.nix
+        ];
         extraSpecialArgs = {
           inherit pc hyprland hyprcursor-phinger hyprland-qtutils;
         };
