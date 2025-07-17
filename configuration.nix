@@ -260,6 +260,7 @@
     vlc
     hyprpaper
     flatpak
+    plantuml
 
     # Libraries and dependencies
     libnotify
