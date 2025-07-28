@@ -187,7 +187,7 @@
   };
 
   stylix.enable = true;
-  stylix.base16Scheme = "${pkgs.base16-schemes}/share/themes/rose-pine.yaml";
+  stylix.base16Scheme = "${pkgs.base16-schemes}/share/themes/nord.yaml";
 
   # Install firefox.
   programs.firefox.enable = true;
