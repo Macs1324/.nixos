@@ -7,8 +7,8 @@
     lsp = {
       enable = true;
       servers = {
-        nil-ls.enable = true; # Nix LSP
-        lua-ls.enable = true;
+        nil_ls.enable = true; # Nix LSP
+        lua_ls.enable = true;
       };
     };
 
