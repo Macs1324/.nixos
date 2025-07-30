@@ -10,6 +10,7 @@
     ./home/hyprland.nix
     ./home/eww.nix
     ./home/waybar.nix
+    ./home/nvim
     hyprcursor-phinger.homeManagerModules.hyprcursor-phinger
   ];
   # Home Manager needs a bit of information about you and the
