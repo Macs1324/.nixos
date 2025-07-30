@@ -59,7 +59,7 @@
           ./home.nix
         ];
         extraSpecialArgs = {
-          inherit pc hyprland hyprcursor-phinger hyprland-qtutils nvix;
+          inherit pc hyprland hyprcursor-phinger hyprland-qtutils nvix stylix;
         };
       };
     };

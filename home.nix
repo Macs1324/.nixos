@@ -4,6 +4,7 @@
   hyprcursor-phinger,
   hyprland-qtutils,
   nvix,
+  stylix,
   ...
 }: {
   imports = [
@@ -16,6 +17,8 @@
   # paths it should manage.
   home.username = "macs";
   home.homeDirectory = "/home/macs";
+
+  stylix.autoEnable = true;
 
   programs.git = {
     enable = true;
