@@ -13,6 +13,7 @@
       url = "github:danth/stylix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+    nvix.url = "github:niksingh710/nvix";
   };
 
   outputs = {
@@ -24,6 +25,7 @@
     hyprcursor-phinger,
     zen-browser,
     stylix,
+    nvix,
     ...
   }: let
     system = "x86_64-linux";
@@ -57,7 +59,7 @@
           ./home.nix
         ];
         extraSpecialArgs = {
-          inherit pc hyprland hyprcursor-phinger hyprland-qtutils;
+          inherit pc hyprland hyprcursor-phinger hyprland-qtutils nvix;
         };
       };
     };

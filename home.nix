@@ -3,6 +3,7 @@
   pkgs,
   hyprcursor-phinger,
   hyprland-qtutils,
+  nvix,
   ...
 }: {
   imports = [
@@ -161,6 +162,7 @@
 
   home.packages = [
     hyprland-qtutils.packages."${pkgs.system}".default
+    nvix.packages.${pkgs.system}.full
   ];
 
   # This value determines the Home Manager release that your
