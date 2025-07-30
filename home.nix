@@ -3,7 +3,6 @@
   pkgs,
   hyprcursor-phinger,
   hyprland-qtutils,
-  nvix,
   stylix,
   ...
 }: {
@@ -19,6 +18,7 @@
   home.homeDirectory = "/home/macs";
 
   stylix.autoEnable = true;
+  stylix.base16Scheme = "${pkgs.base16-schemes}/share/themes/nord.yaml";
 
   programs.git = {
     enable = true;
@@ -165,7 +165,6 @@
 
   home.packages = [
     hyprland-qtutils.packages."${pkgs.system}".default
-    nvix.packages.${pkgs.system}.full
   ];
 
   # This value determines the Home Manager release that your
