@@ -98,5 +98,25 @@
       action = "<c-w>v";
       options.desc = "Vertical split";
     }
+
+    # Tab navigation
+    {
+      mode = "n";
+      key = "<leader>c";
+      action = "<cmd>bdelete<cr>";
+      options.desc = "Close current tab";
+    }
+    {
+      mode = "n";
+      key = "<S-h>";
+      action = "<cmd>bprevious<cr>";
+      options.desc = "Previous tab";
+    }
+    {
+      mode = "n";
+      key = "<S-l>";
+      action = "<cmd>bnext<cr>";
+      options.desc = "Next tab";
+    }
   ];
 }
