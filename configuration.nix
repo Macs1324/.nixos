@@ -259,10 +259,12 @@
     wget
     gh
     pavucontrol
+    pamixer
     rnote # note app
     zip
     unzip
     bitwarden-desktop
+    gnome-calendar
     bzip2
     obs-studio
     vlc
@@ -274,6 +276,7 @@
     libnotify
     pulseaudio
     wl-clipboard
+    wlogout
     grim
     slurp
     clipse
