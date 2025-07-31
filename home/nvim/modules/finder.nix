@@ -73,10 +73,6 @@
 
   # Additional plugins for enhanced functionality
   plugins = {
-    project-nvim = {
-      enable = true;
-      enableTelescope = true;
-    };
     todo-comments = {
       enable = true;
     };
@@ -175,8 +171,29 @@
     {
       mode = "n";
       key = "<leader>fp";
-      action = "<cmd>Telescope projects<cr>";
-      options.desc = "Projects";
+      action.__raw = ''
+        function()
+          require('telescope.builtin').find_files({
+            prompt_title = 'Find Projects',
+            cwd = vim.fn.expand('~'),
+            find_command = {'fd', '--type', 'd', '--max-depth', '3', '-E', '.git', '-E', 'node_modules'},
+            attach_mappings = function(prompt_bufnr, map)
+              local actions = require('telescope.actions')
+              local action_state = require('telescope.actions.state')
+
+              map('i', '<CR>', function()
+                local selection = action_state.get_selected_entry()
+                actions.close(prompt_bufnr)
+                vim.cmd('cd ' .. selection.path)
+                require('telescope.builtin').find_files({ cwd = selection.path })
+              end)
+
+              return true
+            end,
+          })
+        end
+      '';
+      options.desc = "Find Projects";
     }
 
     # Git (using Telescope's built-in git pickers)
@@ -285,4 +302,37 @@
       options.desc = "Grep Word Under Cursor";
     }
   ];
+
+  extraConfigLua = ''
+    -- Simple project detection based on common project markers
+    local function find_project_root()
+      local markers = {'.git', 'package.json', 'Cargo.toml', 'go.mod', 'pyproject.toml', 'flake.nix'}
+      local current = vim.fn.expand('%:p:h')
+
+      while current ~= '/' do
+        for _, marker in ipairs(markers) do
+          if vim.fn.filereadable(current .. '/' .. marker) == 1 or
+             vim.fn.isdirectory(current .. '/' .. marker) == 1 then
+            return current
+          end
+        end
+        current = vim.fn.fnamemodify(current, ':h')
+      end
+
+      return vim.fn.getcwd()
+    end
+
+    -- Auto-change to project root when opening files
+    vim.api.nvim_create_autocmd('BufEnter', {
+      pattern = "*",
+      callback = function()
+        if vim.bo.buftype == "" then
+          local root = find_project_root()
+          if root ~= vim.fn.getcwd() then
+            vim.cmd('cd ' .. root)
+          end
+        end
+      end,
+    })
+  '';
 }

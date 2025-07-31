@@ -9,6 +9,8 @@
       servers = {
         nil_ls.enable = true; # Nix LSP
         lua_ls.enable = true;
+        svelte.enable = true; # Svelte LSP
+        ts_ls.enable = true; # TS/JS
       };
     };
   };
@@ -16,7 +18,7 @@
   keymaps = [
     {
       mode = "n";
-      key = "<leader>gd";
+      key = "gd";
       action = "<cmd>lua vim.lsp.buf.definition()<cr>";
       options.desc = "Go to definition";
     }
