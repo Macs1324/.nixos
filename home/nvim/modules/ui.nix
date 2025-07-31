@@ -17,10 +17,42 @@
       };
     };
 
+    notify = {
+      enable = true;
+      settings = {
+        background_colour = "#000000";
+        fps = 60;
+        icons = {
+          debug = "";
+          error = "";
+          info = "";
+          trace = "✎";
+          warn = "";
+        };
+        level = "info";
+        max_height = 10;
+        max_width = 80;
+        minimum_width = 50;
+        on_close = {
+          __raw = "function() print('Window closed') end";
+        };
+        on_open = {
+          __raw = "function() print('Window opened') end";
+        };
+        render = "default";
+        stages = "fade_in_slide_out";
+        timeout = 5000;
+        top_down = true;
+      };
+    };
+
     nui.enable = true;
     noice = {
       enable = true;
       settings.presets = {
+        command_palette = true;
+        inc_rename = true;
+        lsp_doc_border = true;
       };
     };
     which-key = {
@@ -116,6 +148,10 @@
       options.desc = "Toggle colorscheme";
     }
   ];
+
+  opts = {
+    cursorline = true;
+  };
 
   extraConfigLua = ''
     -- UI specific lua config

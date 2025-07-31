@@ -34,6 +34,14 @@ in {
     colorschemes.nord = {
       enable = true;
       autoLoad = true;
+      settings = {
+        disable_background = true;
+        cursorline_transparent = true;
+      };
+    };
+    clipboard = {
+      providers.wl-copy.enable = true; # for Wayland
+      register = "unnamedplus";
     };
 
     # Merge in all module configurations
