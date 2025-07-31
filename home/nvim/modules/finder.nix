@@ -225,7 +225,7 @@
     # LSP integration
     {
       mode = "n";
-      key = "<leader>lr";
+      key = "<leader>fR";
       action = "<cmd>Telescope lsp_references<cr>";
       options.desc = "LSP References";
     }

@@ -18,11 +18,14 @@
           fetching_timeout = 200;
         };
 
-        # Completion behavior
+        # Completion behavior - prevent any preselection
         completion = {
           completeopt = "menu,menuone,noselect";
           keyword_length = 1;
         };
+
+        # Add preselect setting to prevent auto-selection
+        preselect = "cmp.PreselectMode.None";
 
         # Snippet expansion
         snippet = {
@@ -179,11 +182,12 @@
               c = cmp.mapping.confirm({ behavior = cmp.ConfirmBehavior.Replace, select = true }),
             })
           '';
+          # Simple Tab mapping - should work if nothing is preselected
           "<Tab>".__raw = ''
             cmp.mapping(function(fallback)
               local luasnip = require('luasnip')
               if cmp.visible() then
-                cmp.select_next_item()
+                cmp.select_next_item({ behavior = cmp.SelectBehavior.Insert })
               elseif luasnip.locally_jumpable(1) then
                 luasnip.jump(1)
               else
@@ -191,11 +195,12 @@
               end
             end, { "i", "s" })
           '';
+          # FIXED: Shift+Tab mapping for consistency
           "<S-Tab>".__raw = ''
             cmp.mapping(function(fallback)
               local luasnip = require('luasnip')
               if cmp.visible() then
-                cmp.select_prev_item()
+                cmp.select_prev_item({ behavior = cmp.SelectBehavior.Insert })
               elseif luasnip.locally_jumpable(-1) then
                 luasnip.jump(-1)
               else
