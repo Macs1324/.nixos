@@ -17,6 +17,7 @@
   plugins.nvim-tree = {
     enable = true;
 
+    openOnSetup = true;
     disableNetrw = true;
     hijackNetrw = true;
     hijackCursor = true;

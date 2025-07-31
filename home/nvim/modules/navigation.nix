@@ -25,9 +25,59 @@
     }
     {
       mode = "n";
-      key = "<c-l>";
-      action = "<c-w>l";
-      options.desc = "move to right window";
+      key = "<C-Left>";
+      action.__raw = ''
+        function()
+          if vim.fn.winnr() == vim.fn.winnr('h') then
+            vim.cmd('vertical resize -2')
+          else
+            vim.cmd('vertical resize +2')
+          end
+        end
+      '';
+      options.desc = "Expand window towards left";
+    }
+    {
+      mode = "n";
+      key = "<C-Right>";
+      action.__raw = ''
+        function()
+          if vim.fn.winnr() == vim.fn.winnr('l') then
+            vim.cmd('vertical resize -2')
+          else
+            vim.cmd('vertical resize +2')
+          end
+        end
+      '';
+      options.desc = "Expand window towards right";
+    }
+    {
+      mode = "n";
+      key = "<C-Up>";
+      action.__raw = ''
+        function()
+          if vim.fn.winnr() == vim.fn.winnr('k') then
+            vim.cmd('resize -2')
+          else
+            vim.cmd('resize +2')
+          end
+        end
+      '';
+      options.desc = "Expand window towards top";
+    }
+    {
+      mode = "n";
+      key = "<C-Down>";
+      action.__raw = ''
+        function()
+          if vim.fn.winnr() == vim.fn.winnr('j') then
+            vim.cmd('resize -2')
+          else
+            vim.cmd('resize +2')
+          end
+        end
+      '';
+      options.desc = "Expand window towards bottom";
     }
     {
       mode = "n";
