@@ -28,6 +28,7 @@
 
           -- Use l to enter directory or open file
           vim.keymap.set('n', 'l', api.node.open.edit, opts('Open'))
+          vim.keymap.set('n', '<cr>', api.node.open.edit, opts('Open'))
           -- Use h to close directory
           vim.keymap.set('n', 'h', api.node.navigate.parent_close, opts('Close Directory'))
           -- Use z to collapse all directories
