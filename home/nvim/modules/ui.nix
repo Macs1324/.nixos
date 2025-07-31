@@ -64,6 +64,31 @@
             group = "UI";
             desc = "UI operations";
           }
+          {
+            __unkeyed-1 = "<leader>l";
+            group = "LSP";
+            desc = "Language Server Protocol";
+          }
+          {
+            __unkeyed-1 = "<leader>s";
+            group = "Search";
+            desc = "Search operations";
+          }
+          {
+            __unkeyed-1 = "<leader>f";
+            group = "Find";
+            desc = "Find files and content";
+          }
+          {
+            __unkeyed-1 = "<leader>g";
+            group = "Git";
+            desc = "Git operations";
+          }
+          {
+            __unkeyed-1 = "<leader>t";
+            group = "Toggle";
+            desc = "Toggle settings";
+          }
         ];
       };
     };

@@ -26,7 +26,7 @@
       mode = "n";
       key = "<leader>lr";
       action = "<cmd>lua vim.lsp.buf.references()<cr>";
-      options.desc = "Show references";
+      options.desc = "LSP References";
     }
   ];
 
