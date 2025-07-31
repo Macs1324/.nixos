@@ -286,14 +286,6 @@
       options.desc = "Colorschemes";
     }
 
-    # Search in current buffer
-    {
-      mode = "n";
-      key = "<leader>/";
-      action = "<cmd>Telescope current_buffer_fuzzy_find<cr>";
-      options.desc = "Search in Buffer";
-    }
-
     # Grep word under cursor
     {
       mode = "n";
