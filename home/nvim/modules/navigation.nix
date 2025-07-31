@@ -23,6 +23,13 @@
       action = "<C-w>k";
       options.desc = "Move to top window";
     }
+
+    {
+      mode = "n";
+      key = "<C-l>";
+      action = "<C-w>l";
+      options.desc = "Move to right window";
+    }
     {
       mode = "n";
       key = "<C-Left>";

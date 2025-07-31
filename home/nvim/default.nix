@@ -35,7 +35,6 @@ in {
       enable = true;
       autoLoad = true;
       settings = {
-        disable_background = true;
         cursorline_transparent = true;
       };
     };
