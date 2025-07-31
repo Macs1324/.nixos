@@ -34,9 +34,6 @@ in {
     colorschemes.nord = {
       enable = true;
       autoLoad = true;
-      settings = {
-        cursorline_transparent = true;
-      };
     };
     clipboard = {
       providers.wl-copy.enable = true; # for Wayland
