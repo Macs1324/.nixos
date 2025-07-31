@@ -150,6 +150,7 @@
         };
         exec-once = [
           "waybar"
+          "nm-applet"
           "hyprpaper"
           "exec-once = clipse -listen"
         ];

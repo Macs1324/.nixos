@@ -20,7 +20,6 @@
         modules-center = ["hyprland/workspaces"];
         modules-right = [
           "pulseaudio"
-          "network"
           "cpu"
           "memory"
           "temperature"
@@ -71,14 +70,6 @@
           "on-click" = "pavucontrol";
           "on-scroll-up" = "pamixer -i 5";
           "on-scroll-down" = "pamixer -d 5";
-        };
-
-        "network" = {
-          "format-ethernet" = "󰈀";
-          "format-wifi" = "󰖩";
-          "format-disconnected" = "󰖪";
-          "tooltip-format-ethernet" = "{ifname}: {ipaddr}";
-          "tooltip-format-wifi" = "{essid}: {signalStrength}%";
         };
 
         "cpu" = {
@@ -220,7 +211,6 @@
       }
 
       #pulseaudio,
-      #network,
       #cpu,
       #memory,
       #temperature,
@@ -238,7 +228,6 @@
 
       #custom-launcher:hover,
       #pulseaudio:hover,
-      #network:hover,
       #cpu:hover,
       #memory:hover,
       #temperature:hover,
@@ -256,10 +245,6 @@
       }
 
       #pulseaudio.muted {
-        color: #ff5555;
-      }
-
-      #network.disconnected {
         color: #ff5555;
       }
 

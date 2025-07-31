@@ -272,6 +272,7 @@
     hyprpaper
     flatpak
     plantuml
+    networkmanagerapplet
 
     # Libraries and dependencies
     libnotify
