@@ -33,12 +33,12 @@
         max_height = 10;
         max_width = 80;
         minimum_width = 50;
-        on_close = {
-          __raw = "function() print('Window closed') end";
-        };
-        on_open = {
-          __raw = "function() print('Window opened') end";
-        };
+        # on_close = {
+        #   __raw = "function() print('Window closed') end";
+        # };
+        # on_open = {
+        #   __raw = "function() print('Window opened') end";
+        # };
         render = "default";
         stages = "fade_in_slide_out";
         timeout = 5000;

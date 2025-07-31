@@ -11,11 +11,6 @@
         lua_ls.enable = true;
       };
     };
-
-    cmp = {
-      enable = true;
-      autoEnableSources = true;
-    };
   };
 
   keymaps = [

@@ -12,7 +12,6 @@
         };
       };
       undo.enable = true;
-      project-nvim.enable = true;
     };
     settings = {
       defaults = {
