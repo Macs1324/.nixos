@@ -217,6 +217,7 @@
     shellInit = ''
       fastfetch
       alias nd="nix develop"
+      alias nv="neovide --fork"
     '';
     autosuggestions.enable = true;
     zsh-autoenv.enable = true;
