@@ -35,6 +35,12 @@
           vim.keymap.set('n', 'z', api.tree.collapse_all, opts('Collapse All'))
           -- Use a to add file
           vim.keymap.set('n', 'a', api.fs.create, opts('Create File/Directory'))
+          -- Vim-style file management
+          vim.keymap.set('n', 'y', api.fs.copy.node, opts('Copy'))
+          vim.keymap.set('n', 'x', api.fs.cut, opts('Cut'))
+          vim.keymap.set('n', 'p', api.fs.paste, opts('Paste'))
+          vim.keymap.set('n', 'r', api.fs.rename, opts('Rename'))
+          vim.keymap.set('n', 'd', api.fs.remove, opts('Delete'))
         end
       '';
     };

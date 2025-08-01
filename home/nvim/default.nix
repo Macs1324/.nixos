@@ -30,6 +30,7 @@ in {
   programs.nixvim = {
     enable = true;
     globals.mapleader = " ";
+    globals.neovide_opacity = 0.8;
 
     colorschemes.nord = {
       enable = true;
