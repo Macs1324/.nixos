@@ -33,6 +33,8 @@
           vim.keymap.set('n', 'h', api.node.navigate.parent_close, opts('Close Directory'))
           -- Use z to collapse all directories
           vim.keymap.set('n', 'z', api.tree.collapse_all, opts('Collapse All'))
+          -- Use a to add file
+          vim.keymap.set('n', 'a', api.fs.create, opts('Create File/Directory'))
         end
       '';
     };
