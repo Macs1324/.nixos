@@ -11,6 +11,7 @@
         lua_ls.enable = true;
         svelte.enable = true; # Svelte LSP
         ts_ls.enable = true; # TS/JS
+        marksman.enable = true;
       };
     };
   };
