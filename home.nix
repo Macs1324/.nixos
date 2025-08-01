@@ -10,6 +10,7 @@
     ./home/hyprland.nix
     ./home/eww.nix
     ./home/waybar.nix
+    ./home/wlogout.nix
     ./home/nvim
     hyprcursor-phinger.homeManagerModules.hyprcursor-phinger
   ];
