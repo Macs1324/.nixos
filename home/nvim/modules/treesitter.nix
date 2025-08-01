@@ -28,6 +28,7 @@
         min_window_height = 40;
       };
     };
+    ts-autotag.enable = true;
     # tpope's indent fixes
     sleuth.enable = true;
   };
