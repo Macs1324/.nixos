@@ -138,10 +138,6 @@
         transition-duration: 0.3s;
       }
 
-      #workspaces {
-        margin: 8px 0;
-      }
-
       #workspaces button {
         all: unset;
         padding: 12px 0;
