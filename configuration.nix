@@ -306,6 +306,7 @@
 
     # CLI Tools
     alejandra
+    prettier
     ripgrep
     fd
     zsh-powerlevel10k

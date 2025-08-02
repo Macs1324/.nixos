@@ -14,6 +14,43 @@
         marksman.enable = true;
       };
     };
+    lsp-format = {
+      enable = true;
+      autoLoad = true;
+      settings = {
+        go = {
+          exclude = [
+            "gopls"
+          ];
+          force = true;
+          order = [
+            "gopls"
+            "efm"
+          ];
+          sync = true;
+        };
+        typescript = {
+          tab_width = {
+            __raw = ''
+              function()
+                return vim.opt.shiftwidth:get()
+              end'';
+          };
+        };
+        yaml = {
+          tab_width = 2;
+        };
+      };
+    };
+    none-ls = {
+      enable = true;
+      autoLoad = true;
+      enableLspFormat = true;
+      sources.formatting.prettierd = {
+        enable = true;
+        disableTsServerFormatter = true;
+      };
+    };
   };
 
   keymaps = [
@@ -38,6 +75,13 @@
       signs = true,
       underline = true,
       update_in_insert = false,
+    })
+
+    -- Format on save
+    vim.api.nvim_create_autocmd("BufWritePre", {
+      callback = function()
+        vim.lsp.buf.format()
+      end,
     })
   '';
 }
