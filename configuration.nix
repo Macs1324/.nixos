@@ -17,10 +17,14 @@
       ./hardware-configuration.nix
     ]
     ++ {
-      "homedesktop" = [./system/games.nix ./system/work.nix];
+      "homedesktop" = [
+        ./system/games.nix
+        ./system/work.nix
+      ];
       "workdesktop" = [./system/work.nix];
       "worklaptop" = [./system/work.nix];
-    }.${
+    }
+  .${
       pc
     };
 
@@ -110,9 +114,7 @@
     then ["nvidia"]
     else [
       "modesetting"
-      /*
-      "fbdev"
-      */
+      # "fbdev"
     ];
 
   # Increase the amount of inotify watchers
@@ -186,7 +188,16 @@
   users.users.macs = {
     isNormalUser = true;
     description = "Max Blank";
-    extraGroups = ["networkmanager" "wheel" "uinput" "video" "render" "docker" "plugdev" "seat"];
+    extraGroups = [
+      "networkmanager"
+      "wheel"
+      "uinput"
+      "video"
+      "render"
+      "docker"
+      "plugdev"
+      "seat"
+    ];
     packages = with pkgs; [
       kdePackages.kate
       #  thunderbird
@@ -209,7 +220,9 @@
   programs.git = {
     enable = true;
     config = {
-      credential = {helper = "store";};
+      credential = {
+        helper = "store";
+      };
     };
   };
   programs.zsh = {
@@ -419,7 +432,10 @@
   # Or disable the firewall altogether.
   networking.firewall.enable = false;
   nix.settings = {
-    experimental-features = ["nix-command" "flakes"];
+    experimental-features = [
+      "nix-command"
+      "flakes"
+    ];
 
     substituters = ["https://hyprland.cachix.org"];
     trusted-public-keys = ["hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="];

@@ -170,6 +170,33 @@
         };
       };
     };
+    virt-column = {
+      enable = true;
+      autoLoad = true;
+      settings = {
+        char = "┃";
+        enabled = true;
+        exclude = {
+          buftypes = [
+            "nofile"
+            "quickfix"
+            "terminal"
+            "prompt"
+          ];
+          filetypes = [
+            "lspinfo"
+            "packer"
+            "checkhealth"
+            "help"
+            "man"
+            "TelescopePrompt"
+            "TelescopeResults"
+          ];
+        };
+        highlight = "NonText";
+        virtcolumn = "";
+      };
+    };
   };
 
   keymaps = [
@@ -183,6 +210,7 @@
 
   opts = {
     cursorline = true;
+    colorcolumn = "80";
   };
 
   extraConfigLua = ''
