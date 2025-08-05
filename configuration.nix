@@ -285,6 +285,7 @@
     hyprpaper
     flatpak
     plantuml
+    mermaid-cli
     networkmanagerapplet
 
     # Libraries and dependencies
@@ -298,6 +299,7 @@
     libadwaita
     linuxHeaders
     clinfo
+    imagemagick
 
     # Programming languages
     nodejs
