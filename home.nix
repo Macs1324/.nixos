@@ -82,13 +82,32 @@
   # programs.ncspot.enable = true;
   # programs.cava.enable = true;
 
-  programs.ghostty = {
+  programs.kitty = {
     enable = true;
+    themeFile = "Nord";
+    font = {
+      name = "JetBrainsMono Nerd Font";
+      size = 14;
+    };
     settings = {
-      theme = "nord";
-      font-size = 14;
-      background-opacity = 0.78;
-      gtk-single-instance = true;
+      background_opacity = "0.78";
+      single_instance = "yes";
+      enable_audio_bell = "no";
+      visual_bell_duration = "0.0";
+      window_padding_width = "4";
+      tab_bar_style = "powerline";
+      tab_powerline_style = "slanted";
+      tab_title_template = "{title}{' :{}:'.format(num_windows) if num_windows > 1 else ''}";
+      allow_remote_control = "yes";
+      listen_on = "unix:/tmp/kitty";
+      dynamic_background_opacity = "yes";
+      confirm_os_window_close = "0";
+    };
+    keybindings = {
+      "ctrl+k" = "clear_terminal clear active";
+      "ctrl+shift+equal" = "change_font_size all +2.0";
+      "ctrl+shift+minus" = "change_font_size all -2.0";
+      "ctrl+shift+backspace" = "change_font_size all 0";
     };
   };
 

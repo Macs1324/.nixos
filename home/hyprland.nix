@@ -18,7 +18,7 @@
       height = 400;
       location = "center";
       columns = 1;
-      term = "ghostty";
+      term = "kitty";
       gtk_dark = true;
       dynamic_lines = true;
       matching = "contains";
@@ -161,7 +161,7 @@
         };
         settings = {
           "$mod" = "SUPER";
-          "$term" = "ghostty";
+          "$term" = "kitty";
           "env" = [
             "HYPRCURSOR_THEME,phinger-cursors-light"
             "HYPRCURSOR_SIZE,32"
