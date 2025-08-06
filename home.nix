@@ -104,7 +104,6 @@
       confirm_os_window_close = "0";
     };
     keybindings = {
-      "ctrl+k" = "clear_terminal clear active";
       "ctrl+shift+equal" = "change_font_size all +2.0";
       "ctrl+shift+minus" = "change_font_size all -2.0";
       "ctrl+shift+backspace" = "change_font_size all 0";
