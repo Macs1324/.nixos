@@ -287,6 +287,7 @@
     plantuml
     mermaid-cli
     networkmanagerapplet
+    cava
 
     # Libraries and dependencies
     libnotify

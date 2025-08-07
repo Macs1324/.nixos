@@ -267,6 +267,9 @@
             "workspaces,1,2.5,ease,slidefadevert"
             "windows,1,3.0,overshot,gnomed"
           ];
+          layerrule = [
+            "animation slide, notifications"
+          ];
         };
       };
     };
