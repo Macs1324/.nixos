@@ -306,7 +306,7 @@
       };
     }
     else let
-      wallpaper_path = "~/.nixos/assets/wallpapers/${pc}.png";
+      wallpaper_path = "~/.nixos/assets/wallpapers/${pc}.jpg";
       display =
         if pc == "worklaptop"
         then "eDP-1"
