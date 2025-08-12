@@ -22,9 +22,9 @@
       disable_netrw = true;
       hijack_netrw = true;
       hijack_cursor = true;
-      hijack_nnamed_buffer_when_opening = true;
+      hijack_unnamed_buffer_when_opening = true;
       sync_root_with_cwd = true;
-      updateFocusedFile.enable = true;
+      update_focused_file.enable = true;
       sort_by = "case_sensitive";
 
       filters = {
@@ -40,13 +40,13 @@
         width = 30;
         number = true;
         relativenumber = true;
-        preserveWindowProportions = true;
+        preserve_window_proportions = true;
       };
       renderer = {
-        rootFolderLabel = false;
-        indentWidth = 2;
-        highlightGit = true;
-        indentMarkers.enable = true;
+        root_folder_label = false;
+        indent_width = 2;
+        highlight_git = true;
+        indent_markers.enable = true;
 
         icons.glyphs = {
           default = "󰈚";
@@ -54,12 +54,12 @@
           folder = {
             default = "";
             empty = "";
-            emptyOpen = "";
+            empty_open = "";
             open = "";
             symlink = "";
-            symlinkOpen = "";
-            arrowOpen = "";
-            arrowClosed = "";
+            symlink_open = "";
+            arrow_open = "";
+            arrow_closed = "";
           };
           git = {
             unstaged = "✗";
@@ -73,7 +73,7 @@
         };
       };
 
-      onAttach = {
+      on_attach = {
         __raw = ''
           function(bufnr)
             local api = require "nvim-tree.api"
