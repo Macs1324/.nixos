@@ -30,6 +30,7 @@
 
   # Bootloader.
   boot.loader.systemd-boot.enable = true;
+  boot.loader.timeout = null;
   boot.loader.efi.canTouchEfiVariables = true;
 
   networking.hostName = "nixmacs"; # Define your hostname.
