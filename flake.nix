@@ -7,7 +7,6 @@
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
     hyprland.url = "github:hyprwm/Hyprland";
     hyprland-qtutils.url = "github:hyprwm/hyprland-qtutils";
-    hyprcursor-phinger.url = "github:jappie3/hyprcursor-phinger";
     zen-browser.url = "github:0xc000022070/zen-browser-flake";
     stylix = {
       url = "github:danth/stylix";
@@ -26,7 +25,6 @@
     hyprland-qtutils,
     nixpkgs,
     home-manager,
-    hyprcursor-phinger,
     zen-browser,
     stylix,
     nixvim,
@@ -64,7 +62,12 @@
           ./home.nix
         ];
         extraSpecialArgs = {
-          inherit pc hyprland hyprcursor-phinger hyprland-qtutils stylix;
+          inherit
+            pc
+            hyprland
+            hyprland-qtutils
+            stylix
+            ;
         };
       };
     };

@@ -1,7 +1,6 @@
 {
   config,
   pkgs,
-  hyprcursor-phinger,
   hyprland-qtutils,
   stylix,
   ...
@@ -12,7 +11,6 @@
     ./home/waybar.nix
     ./home/wlogout.nix
     ./home/nvim
-    hyprcursor-phinger.homeManagerModules.hyprcursor-phinger
   ];
   # Home Manager needs a bit of information about you and the
   # paths it should manage.
@@ -67,11 +65,10 @@
     };
   };
 
-  programs.hyprcursor-phinger.enable = true;
   home.pointerCursor = {
-    name = "phinger-cursors-light";
-    package = pkgs.phinger-cursors;
-    size = 32;
+    name = "Bibata-Modern-Ice";
+    package = pkgs.bibata-cursors;
+    size = 24;
     gtk.enable = true;
   };
   programs.direnv = {

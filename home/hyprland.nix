@@ -163,8 +163,8 @@
           "$mod" = "SUPER";
           "$term" = "kitty";
           "env" = [
-            "HYPRCURSOR_THEME,phinger-cursors-light"
-            "HYPRCURSOR_SIZE,32"
+            "HYPRCURSOR_THEME,Bibata-Modern-Ice"
+            "HYPRCURSOR_SIZE,24"
           ];
           monitor =
             if pc == "workdesktop"
@@ -239,8 +239,8 @@
             ++ (
               # workspaces
               # binds $mod + [shift +] {1..10} to [move to] workspace {1..10}
-              builtins.concatLists (builtins.genList
-                (
+              builtins.concatLists (
+                builtins.genList (
                   x: let
                     ws = let
                       c = (x + 1) / 10;
@@ -251,7 +251,8 @@
                     "$mod SHIFT, ${ws}, movetoworkspace, ${toString (x + 1)}"
                   ]
                 )
-                10)
+                10
+              )
             );
           bindm = [
             # mouse movements
@@ -283,7 +284,10 @@
       settings = {
         ipc = "on";
         splash = false;
-        preload = ["${wallpaper}-1.png" "${wallpaper}-2.png"];
+        preload = [
+          "${wallpaper}-1.png"
+          "${wallpaper}-2.png"
+        ];
         wallpaper = [
           "DP-2,${wallpaper}-1.png"
           "DP-1,${wallpaper}-2.png"
@@ -298,7 +302,10 @@
       settings = {
         ipc = "on";
         splash = "false";
-        preload = ["${wallpaper}-1.jpg" "${wallpaper}-2.png"];
+        preload = [
+          "${wallpaper}-1.jpg"
+          "${wallpaper}-2.png"
+        ];
         wallpaper = [
           "DP-2,${wallpaper}-1.jpg"
           "HDMI-A-2,${wallpaper}-2.png"
