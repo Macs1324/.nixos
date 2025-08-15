@@ -49,6 +49,13 @@
       sources.formatting.prettierd = {
         enable = true;
         disableTsServerFormatter = true;
+        settings = {
+          extra_args = [
+            "--use-tabs"
+            "--tab-width=4"
+            "--print-width=80"
+          ];
+        };
       };
     };
   };
