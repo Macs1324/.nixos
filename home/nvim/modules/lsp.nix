@@ -12,6 +12,7 @@
         svelte.enable = true; # Svelte LSP
         ts_ls.enable = true; # TS/JS
         marksman.enable = true;
+        biome.enable = true;
       };
     };
     lsp-format = {
