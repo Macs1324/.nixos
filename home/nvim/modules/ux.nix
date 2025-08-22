@@ -14,6 +14,9 @@
     softtabstop = 4; # Number of columns for tab/backspace in insert mode
     smartindent = true; # Smart indentation
     autoindent = true; # Copy indent from current line when starting new line
+
+    # Wrapping settings
+    wrap = false; # Disable line wrapping by default
   };
 
   plugins = {
@@ -31,6 +34,15 @@
       options = {
         silent = true;
         desc = "Clear search highlighting if active";
+      };
+    }
+    {
+      mode = "n";
+      key = "<leader>uw";
+      action = "<cmd>set wrap!<cr>";
+      options = {
+        silent = true;
+        desc = "Toggle line wrapping";
       };
     }
   ];
