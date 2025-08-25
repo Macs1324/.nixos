@@ -59,13 +59,19 @@
       };
       pickers = {
         find_files = {
-          hidden = true;
+          cwd = {
+            __raw = "vim.g.initial_cwd";
+          };
         };
         live_grep = {
-          additional_args = ["--hidden"];
+          cwd = {
+            __raw = "vim.g.initial_cwd";
+          };
         };
         grep_string = {
-          additional_args = ["--hidden"];
+          cwd = {
+            __raw = "vim.g.initial_cwd";
+          };
         };
       };
     };
@@ -147,20 +153,55 @@
     {
       mode = "n";
       key = "<leader>ff";
-      action = "<cmd>Telescope find_files<cr>";
+      action.__raw = ''
+        function()
+          require('telescope.builtin').find_files({
+            cwd = vim.g.initial_cwd,
+            hidden = false,
+            no_ignore = false
+          })
+        end
+      '';
       options.desc = "Find Files";
     }
     {
       mode = "n";
       key = "<leader>fF";
-      action = "<cmd>Telescope find_files hidden=true<cr>";
-      options.desc = "Find All Files";
+      action.__raw = ''
+        function()
+          require('telescope.builtin').find_files({
+            cwd = vim.g.initial_cwd,
+            hidden = true,
+            no_ignore = true
+          })
+        end
+      '';
+      options.desc = "Find All Files (inc. hidden/ignored)";
     }
     {
       mode = "n";
       key = "<leader>fw";
-      action = "<cmd>Telescope live_grep<cr>";
-      options.desc = "Live Grep";
+      action.__raw = ''
+        function()
+          require('telescope.builtin').live_grep({
+            cwd = vim.g.initial_cwd
+          })
+        end
+      '';
+      options.desc = "Grep in Files";
+    }
+    {
+      mode = "n";
+      key = "<leader>fW";
+      action.__raw = ''
+        function()
+          require('telescope.builtin').live_grep({
+            cwd = vim.g.initial_cwd,
+            additional_args = {"--hidden", "--no-ignore"}
+          })
+        end
+      '';
+      options.desc = "Grep All Files (inc. hidden/ignored)";
     }
     {
       mode = "n";
@@ -296,35 +337,7 @@
   ];
 
   extraConfigLua = ''
-    -- Simple project detection based on common project markers
-    local function find_project_root()
-      local markers = {'.git', 'package.json', 'Cargo.toml', 'go.mod', 'pyproject.toml', 'flake.nix'}
-      local current = vim.fn.expand('%:p:h')
-
-      while current ~= '/' do
-        for _, marker in ipairs(markers) do
-          if vim.fn.filereadable(current .. '/' .. marker) == 1 or
-             vim.fn.isdirectory(current .. '/' .. marker) == 1 then
-            return current
-          end
-        end
-        current = vim.fn.fnamemodify(current, ':h')
-      end
-
-      return vim.fn.getcwd()
-    end
-
-    -- Auto-change to project root when opening files
-    vim.api.nvim_create_autocmd('BufEnter', {
-      pattern = "*",
-      callback = function()
-        if vim.bo.buftype == "" then
-          local root = find_project_root()
-          if root ~= vim.fn.getcwd() then
-            vim.cmd('cd ' .. root)
-          end
-        end
-      end,
-    })
+    -- Store initial working directory
+    vim.g.initial_cwd = vim.fn.getcwd()
   '';
 }
