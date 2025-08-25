@@ -30,10 +30,12 @@
       filters = {
         custom = ["__pycache__"];
         exclude = [];
+        dotfiles = true;
+        git_ignored = true;
       };
       git = {
         enable = true;
-        ignore = true;
+        ignore = false;
       };
       view = {
         side = "right";
@@ -97,6 +99,11 @@
             vim.keymap.set('n', 'p', api.fs.paste, opts('Paste'))
             vim.keymap.set('n', 'r', api.fs.rename, opts('Rename'))
             vim.keymap.set('n', 'd', api.fs.remove, opts('Delete'))
+            -- Use Shift+H to toggle hidden files and git ignored files
+            vim.keymap.set('n', 'H', function()
+              api.tree.toggle_hidden_filter()
+              api.tree.toggle_gitignore_filter()
+            end, opts('Toggle Hidden & Git Ignored Files'))
           end
         '';
       };
