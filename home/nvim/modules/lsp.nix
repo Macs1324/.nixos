@@ -15,38 +15,10 @@
         biome.enable = true;
       };
     };
-    lsp-format = {
-      enable = true;
-      autoLoad = true;
-      settings = {
-        go = {
-          exclude = [
-            "gopls"
-          ];
-          force = true;
-          order = [
-            "gopls"
-            "efm"
-          ];
-          sync = true;
-        };
-        typescript = {
-          tab_width = {
-            __raw = ''
-              function()
-                return vim.opt.shiftwidth:get()
-              end'';
-          };
-        };
-        yaml = {
-          tab_width = 2;
-        };
-      };
-    };
     none-ls = {
       enable = true;
       autoLoad = true;
-      enableLspFormat = true;
+      enableLspFormat = false;
       sources.formatting.prettierd = {
         enable = true;
         disableTsServerFormatter = true;
@@ -74,6 +46,12 @@
       action = "<cmd>lua vim.lsp.buf.references()<cr>";
       options.desc = "LSP References";
     }
+    {
+      mode = "n";
+      key = "<leader>tf";
+      action = "<cmd>ToggleAutoFormat<cr>";
+      options.desc = "Toggle auto format";
+    }
   ];
 
   extraConfigLua = ''
@@ -85,11 +63,26 @@
       update_in_insert = false,
     })
 
-    -- Format on save
+    -- Auto format toggle
+    vim.g.auto_format = true
+
+    -- Format on save (only if auto_format is enabled)
     vim.api.nvim_create_autocmd("BufWritePre", {
       callback = function()
-        vim.lsp.buf.format()
+        if vim.g.auto_format then
+          vim.lsp.buf.format()
+        end
       end,
     })
+
+    -- Toggle auto format function
+    local function toggle_auto_format()
+      vim.g.auto_format = not vim.g.auto_format
+      local status = vim.g.auto_format and "enabled" or "disabled"
+      print("Auto format " .. status)
+    end
+
+    -- Create user command for toggling
+    vim.api.nvim_create_user_command("ToggleAutoFormat", toggle_auto_format, {})
   '';
 }
