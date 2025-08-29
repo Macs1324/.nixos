@@ -52,6 +52,12 @@
       action = "<cmd>ToggleAutoFormat<cr>";
       options.desc = "Toggle auto format";
     }
+    {
+      mode = "n";
+      key = "<leader>le";
+      action = "<cmd>lua vim.diagnostic.open_float()<cr>";
+      options.desc = "Show line diagnostics";
+    }
   ];
 
   extraConfigLua = ''
