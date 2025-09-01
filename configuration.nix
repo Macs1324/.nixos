@@ -146,9 +146,12 @@
   # };
 
   # Enable the KDE Plasma Desktop Environment.
-  services.desktopManager.plasma6.enable = true;
-  services.displayManager.sddm.enable = true;
-  services.displayManager.sddm.wayland.enable = true;
+  # services.desktopManager.plasma6.enable = true;
+  # services.displayManager.sddm.enable = true;
+  # services.displayManager.sddm.wayland.enable = true;
+
+  services.desktopManager.gnome.enable = true;
+  services.displayManager.gdm.enable = true;
 
   # Configure keymap in X11
 
@@ -189,6 +192,7 @@
   users.users.macs = {
     isNormalUser = true;
     description = "Max Blank";
+    shell = pkgs.zsh;
     extraGroups = [
       "networkmanager"
       "wheel"
@@ -226,29 +230,7 @@
       };
     };
   };
-  programs.zsh = {
-    enable = true;
-    shellInit = ''
-      fastfetch
-      alias nd="nix develop"
-      alias nv="neovide --fork"
-    '';
-    autosuggestions.enable = true;
-    zsh-autoenv.enable = true;
-    syntaxHighlighting.enable = true;
-    ohMyZsh = {
-      enable = true;
-      theme = "robbyrussell";
-      plugins = [
-        "git"
-        "npm"
-        "history"
-        "node"
-        "rust"
-        "deno"
-      ];
-    };
-  };
+  programs.zsh.enable = true;
   programs.nix-ld.enable = true;
   programs.ssh = {
     extraConfig = ''

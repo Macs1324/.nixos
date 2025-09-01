@@ -147,6 +147,30 @@
     };
   };
 
+  programs.zsh = {
+    enable = true;
+    enableCompletion = true;
+    autosuggestion.enable = true;
+    syntaxHighlighting.enable = true;
+    initContent = ''
+      fastfetch
+      alias nd="nix develop"
+      alias nv="neovide --fork"
+    '';
+    oh-my-zsh = {
+      enable = true;
+      theme = "robbyrussell";
+      plugins = [
+        "git"
+        "npm"
+        "history"
+        "node"
+        "rust"
+        "deno"
+      ];
+    };
+  };
+
   programs.bash = {
     enable = true;
     bashrcExtra = ''
