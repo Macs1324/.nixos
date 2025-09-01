@@ -13,6 +13,7 @@
         ts_ls.enable = true; # TS/JS
         marksman.enable = true;
         biome.enable = true;
+        tailwindcss.enable = true;
       };
     };
     none-ls = {
