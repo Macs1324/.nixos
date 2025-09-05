@@ -11,9 +11,11 @@
         lua_ls.enable = true;
         svelte.enable = true; # Svelte LSP
         ts_ls.enable = true; # TS/JS
-        marksman.enable = true;
-        biome.enable = true;
+        marksman.enable = true; # Markdown
+        biome.enable = true; # JS/TS formatter
         tailwindcss.enable = true;
+        cucumber_language_server.enable = true;
+        cucumber_language_server.package = null;
       };
     };
     none-ls = {
