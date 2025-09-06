@@ -13,6 +13,8 @@
         ts_ls.enable = true; # TS/JS
         marksman.enable = true; # Markdown
         biome.enable = true; # JS/TS formatter
+        clangd.enable = true; # C and C++
+        basedpyright.enable = true; # Python LSP
         tailwindcss.enable = true;
         cucumber_language_server.enable = true;
         cucumber_language_server.package = null;
