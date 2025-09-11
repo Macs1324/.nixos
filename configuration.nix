@@ -335,8 +335,28 @@
     godot_4-export-templates-bin
     krita
     gimp
-    texliveMedium
     audacity
+
+    # LaTeX
+    (pkgs.texlive.combine {
+      inherit
+        (pkgs.texlive)
+        scheme-medium
+        dvisvgm
+        dvipng # for preview and export as html
+        wrapfig
+        amsmath
+        moresize
+        fontawesome5
+        geometry
+        raleway
+        ulem
+        hyperref
+        capt-of
+        ;
+      #(setq org-latex-compiler "lualatex")
+      #(setq org-preview-latex-default-process 'dvisvgm)
+    })
 
     # Gaming
     lutris
