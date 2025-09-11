@@ -7,6 +7,7 @@
 }: {
   imports = [
     ./home/hyprland.nix
+    ./home/gnome.nix
     ./home/eww.nix
     ./home/waybar.nix
     ./home/wlogout.nix
@@ -54,14 +55,6 @@
           chars = "\\u000c";
         }
       ];
-    };
-  };
-
-  gtk = {
-    enable = true;
-    theme = {
-      name = "Materia-dark";
-      package = pkgs.materia-theme;
     };
   };
 
