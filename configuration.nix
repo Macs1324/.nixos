@@ -335,7 +335,8 @@
     godot_4-export-templates-bin
     krita
     gimp
-    # audacity
+    texliveMedium
+    audacity
 
     # Gaming
     lutris
