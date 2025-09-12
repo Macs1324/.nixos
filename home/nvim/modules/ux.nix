@@ -24,6 +24,7 @@
       enable = true;
       autoLoad = true;
     };
+    neoscroll.enable = true;
   };
 
   keymaps = [
