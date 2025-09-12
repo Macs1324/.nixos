@@ -298,7 +298,6 @@
 
     # Editors
     vim
-    neovim
     neovide
     emacs
     zed-editor

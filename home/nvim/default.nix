@@ -7,19 +7,23 @@
   # Import all modules from the modules directory
   moduleDir = ./modules;
   moduleFiles = builtins.readDir moduleDir;
-  nixFiles = builtins.filter (name: builtins.match ".*\\.nix$" name != null) (builtins.attrNames moduleFiles);
+  nixFiles = builtins.filter (name: builtins.match ".*\\.nix$" name != null) (
+    builtins.attrNames moduleFiles
+  );
 
   # Import each module and merge them
   modules = map (file: import (moduleDir + "/${file}") {inherit pkgs config;}) nixFiles;
 
   # Merge all modules into one configuration
   mergedConfig =
-    builtins.foldl' (acc: module: {
+    builtins.foldl'
+    (acc: module: {
       plugins = acc.plugins // (module.plugins or {});
       extraConfigLua = acc.extraConfigLua + (module.extraConfigLua or "");
       keymaps = acc.keymaps ++ (module.keymaps or []);
       opts = acc.opts // (module.opts or {});
-    }) {
+    })
+    {
       plugins = {};
       extraConfigLua = "";
       keymaps = [];
@@ -46,5 +50,8 @@ in {
     extraConfigLua = mergedConfig.extraConfigLua;
     keymaps = mergedConfig.keymaps;
     opts = mergedConfig.opts;
+
+    extraLuaPackages = ps: [ps.magick];
+    extraPackages = [pkgs.imagemagick];
   };
 }
