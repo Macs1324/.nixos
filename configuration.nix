@@ -271,6 +271,7 @@
     mermaid-cli
     networkmanagerapplet
     cava
+    pandoc
 
     # Libraries and dependencies
     libnotify
