@@ -61,6 +61,7 @@
     LC_TIME = "sv_SE.UTF-8";
   };
   hardware.uinput.enable = true;
+  hardware.opentabletdriver.enable = true;
   # Enable OpenGL
   hardware.graphics =
     if pc == "homedesktop"
