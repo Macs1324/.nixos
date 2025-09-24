@@ -273,6 +273,7 @@
     networkmanagerapplet
     cava
     pandoc
+    libreoffice
 
     # Libraries and dependencies
     libnotify
