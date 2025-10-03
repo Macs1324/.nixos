@@ -381,6 +381,10 @@
     VISUAL = "nvim";
     GIT_EDITOR = "nvim";
     SHELL = "zsh";
+
+    core = "$HOME/Code/corecf";
+    supervisor = "$HOME/Code/uxstream/services/supervisor/supervisor";
+    portal = "$HOME/Code/customer-portal";
   };
 
   fonts.packages = with pkgs; [
