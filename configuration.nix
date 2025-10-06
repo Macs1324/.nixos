@@ -384,7 +384,7 @@
 
     core = "$HOME/Code/corecf";
     supervisor = "$HOME/Code/uxstream/services/supervisor/supervisor";
-    portal = "$HOME/Code/customer-portal";
+    portal = "$HOME/Code/corecf/web/portal";
   };
 
   fonts.packages = with pkgs; [
