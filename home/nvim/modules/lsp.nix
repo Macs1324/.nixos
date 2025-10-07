@@ -10,30 +10,13 @@
         nil_ls.enable = true; # Nix LSP
         lua_ls.enable = true;
         svelte.enable = true; # Svelte LSP
-        ts_ls.enable = true; # TS/JS
+        ts_ls.enable = true; # TS/JS LSP with formatting
         marksman.enable = true; # Markdown
-        biome.enable = true; # JS/TS formatter
         clangd.enable = true; # C and C++
         basedpyright.enable = true; # Python LSP
         tailwindcss.enable = true;
         cucumber_language_server.enable = true;
         cucumber_language_server.package = null;
-      };
-    };
-    none-ls = {
-      enable = true;
-      autoLoad = true;
-      enableLspFormat = false;
-      sources.formatting.prettierd = {
-        enable = true;
-        disableTsServerFormatter = true;
-        settings = {
-          extra_args = [
-            "--use-tabs"
-            "--tab-width=4"
-            "--print-width=80"
-          ];
-        };
       };
     };
   };
