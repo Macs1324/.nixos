@@ -79,7 +79,7 @@
       size = 14;
     };
     settings = {
-      background_opacity = "0.5";
+      background_opacity = "0.78";
       single_instance = "yes";
       enable_audio_bell = "no";
       visual_bell_duration = "0.0";
