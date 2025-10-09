@@ -329,6 +329,7 @@
     podman
     podman-compose
     viu
+    just
 
     # Browsers
     google-chrome
