@@ -289,7 +289,7 @@
           "${wallpaper}-2.png"
         ];
         wallpaper = [
-          "DP-2,${wallpaper}-1.png"
+          "DP-3,${wallpaper}-1.png"
           "DP-1,${wallpaper}-2.png"
         ];
       };
