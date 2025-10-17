@@ -32,7 +32,7 @@
   boot.kernelParams =
     if pc == "workdesktop"
     then [
-      "i915.force_probe=!e211"
+      # "i915.force_probe=!e211"
       "xe.force_probe=e211"
     ]
     else [];
@@ -73,6 +73,8 @@
     LC_TELEPHONE = "sv_SE.UTF-8";
     LC_TIME = "sv_SE.UTF-8";
   };
+
+  hardware.enableRedistributableFirmware = true;
   hardware.uinput.enable = true;
   hardware.opentabletdriver.enable = true;
   hardware.firmware = with pkgs; [linux-firmware];
@@ -91,10 +93,22 @@
     else if pc == "workdesktop"
     then {
       enable = true;
+      enable32Bit = true;
       extraPackages = with pkgs; [
+        # VA-API (Video Acceleration API)
+        intel-media-driver # iHD driver for newer Intel GPUs
+        intel-vaapi-driver # i965 driver for older Intel GPUs (fallback)
+
+        # Vulkan
+        intel-compute-runtime # OpenCL and Level Zero
+        vpl-gpu-rt # Video Processing Library
+
+        # Mesa drivers
+        mesa.drivers # Includes iris, crocus, etc.
+      ];
+      extraPackages32 = with pkgs.pkgsi686Linux; [
         intel-media-driver
-        intel-compute-runtime
-        vpl-gpu-rt
+        intel-vaapi-driver
         mesa.drivers
       ];
     }
@@ -105,7 +119,17 @@
   environment.sessionVariables =
     {
       "workdesktop" = {
+        # VA-API driver selection (iHD for newer Intel, i965 for older)
         LIBVA_DRIVER_NAME = "iHD";
+
+        # Force Mesa to use the correct GPU (card0 = Arc B60)
+        MESA_LOADER_DRIVER_OVERRIDE = "iris";
+
+        # Vulkan ICD selection
+        VK_ICD_FILENAMES = "/run/opengl-driver/share/vulkan/icd.d/intel_icd.x86_64.json";
+
+        # Enable hardware video decoding
+        VDPAU_DRIVER = "va_gl";
       };
       "worklaptop" = {};
       "homedesktop" = {};
@@ -117,8 +141,9 @@
   services.xserver.videoDrivers =
     if pc == "workdesktop"
     then [
+      # Use modesetting for modern Wayland support with xe driver
+      # DO NOT use "intel" - it's the old DDX driver, not compatible with xe/Arc B60
       "modesetting"
-      "intel"
     ]
     else ["modesetting"];
 
@@ -134,7 +159,7 @@
     then ["amdgpu"]
     else if pc == "workdesktop"
     then [
-      "i915"
+      # "i915"
       "xe"
     ]
     else [];
@@ -282,6 +307,16 @@
     cava
     pandoc
     libreoffice
+    pciutils
+
+    intel-vaapi-driver
+    libva
+    libva-utils # Provides vainfo for checking VA-API
+    intel-gpu-tools # Provides intel_gpu_top
+    vulkan-tools # Provides vulkaninfo
+    mesa-demos # Provides glxinfo
+
+    inxi
 
     # Libraries and dependencies
     libnotify

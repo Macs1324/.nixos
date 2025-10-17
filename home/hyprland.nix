@@ -169,8 +169,8 @@
           monitor =
             if pc == "workdesktop"
             then [
-              "DP-3, 3440x1440@165.00, 0x0, 1"
-              "DP-1, 2560x1440@143.86, 3440x0, 1"
+              "DP-1, 3440x1440@165.00, 0x0, 1"
+              "HDMI-A-2, 2560x1440@143.86, 3440x0, 1"
             ]
             else
               []
@@ -189,8 +189,8 @@
             ++ (
               if pc == "workdesktop"
               then [
-                "1, monitor:DP-3"
-                "2, monitor:DP-1"
+                "1, monitor:DP-1"
+                "2, monitor:HDMI-A-2"
               ]
               else []
             );
@@ -289,8 +289,8 @@
           "${wallpaper}-2.png"
         ];
         wallpaper = [
-          "DP-3,${wallpaper}-1.png"
-          "DP-1,${wallpaper}-2.png"
+          "DP-1,${wallpaper}-1.png"
+          "HDMI-A-2,${wallpaper}-2.png"
         ];
       };
     }
