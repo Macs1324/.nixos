@@ -28,6 +28,14 @@
       pc
     };
 
+  boot.kernelPackages = pkgs.linuxPackages_latest;
+  boot.kernelParams =
+    if pc == "workdesktop"
+    then [
+      "i915.force_probe=!e211"
+      "xe.force_probe=e211"
+    ]
+    else [];
   # Bootloader.
   boot.loader.timeout = null;
   boot.loader.grub.enable = true;
@@ -67,6 +75,9 @@
   };
   hardware.uinput.enable = true;
   hardware.opentabletdriver.enable = true;
+  hardware.firmware = with pkgs; [linux-firmware];
+  hardware.enableAllFirmware = true;
+
   # Enable OpenGL
   hardware.graphics =
     if pc == "homedesktop"
@@ -77,52 +88,39 @@
         rocmPackages.clr.icd
       ];
     }
+    else if pc == "workdesktop"
+    then {
+      enable = true;
+      extraPackages = with pkgs; [
+        intel-media-driver
+        intel-compute-runtime
+        vpl-gpu-rt
+        mesa.drivers
+      ];
+    }
     else {
       enable = true;
     };
 
-  hardware.nvidia =
-    if pc == "workdesktop"
-    then {
-      # Modesetting is required.
-      modesetting.enable = true;
-
-      # Nvidia power management. Experimental, and can cause sleep/suspend to fail.
-      # Enable this if you have graphical corruption issues or application crashes after waking
-      # up from sleep. This fixes it by saving the entire VRAM memory to /tmp/ instead
-      # of just the bare essentials.
-      powerManagement.enable = false;
-
-      # Fine-grained power management. Turns off GPU when not in use.
-      # Experimental and only works on modern Nvidia GPUs (Turing or newer).
-      powerManagement.finegrained = false;
-
-      # Use the NVidia open source kernel module (not to be confused with the
-      # independent third-party "nouveau" open source driver).
-      # Support is limited to the Turing and later architectures. Full list of
-      # supported GPUs is at:
-      # https://github.com/NVIDIA/open-gpu-kernel-modules#compatible-gpus
-      # Only available from driver 515.43.04+
-      # Currently alpha-quality/buggy, so false is currently the recommended setting.
-      open = false;
-
-      # Enable the Nvidia settings menu,
-      # accessible via `nvidia-settings`.
-      nvidiaSettings = true;
-
-      # Optionally, you may need to select the appropriate driver version for your specific GPU.
-      package = config.boot.kernelPackages.nvidiaPackages.stable;
+  environment.sessionVariables =
+    {
+      "workdesktop" = {
+        LIBVA_DRIVER_NAME = "iHD";
+      };
+      "worklaptop" = {};
+      "homedesktop" = {};
     }
-    else {};
+    .${
+      pc
+    };
 
-  # Load nvidia driver for Xorg and Wayland
   services.xserver.videoDrivers =
     if pc == "workdesktop"
-    then ["nvidia"]
-    else [
+    then [
       "modesetting"
-      # "fbdev"
-    ];
+      "intel"
+    ]
+    else ["modesetting"];
 
   # Increase the amount of inotify watchers
   # Note that inotify watches consume 1kB on 64-bit machines.
@@ -134,6 +132,11 @@
   boot.initrd.kernelModules =
     if pc == "homedesktop"
     then ["amdgpu"]
+    else if pc == "workdesktop"
+    then [
+      "i915"
+      "xe"
+    ]
     else [];
 
   systemd.tmpfiles.rules =
@@ -299,7 +302,6 @@
     rustup
     python3
     zig
-    julia
     gcc
     go
     sqlite

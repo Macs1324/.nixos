@@ -169,7 +169,7 @@
           monitor =
             if pc == "workdesktop"
             then [
-              "DP-2, 3440x1440@165.00, 0x0, 1"
+              "DP-3, 3440x1440@165.00, 0x0, 1"
               "DP-1, 2560x1440@143.86, 3440x0, 1"
             ]
             else
@@ -189,7 +189,7 @@
             ++ (
               if pc == "workdesktop"
               then [
-                "1, monitor:DP-2"
+                "1, monitor:DP-3"
                 "2, monitor:DP-1"
               ]
               else []
