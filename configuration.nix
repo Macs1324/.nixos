@@ -104,12 +104,12 @@
         vpl-gpu-rt # Video Processing Library
 
         # Mesa drivers
-        mesa.drivers # Includes iris, crocus, etc.
+        mesa # Includes iris, crocus, etc.
       ];
       extraPackages32 = with pkgs.pkgsi686Linux; [
         intel-media-driver
         intel-vaapi-driver
-        mesa.drivers
+        mesa
       ];
     }
     else {
@@ -308,6 +308,7 @@
     pandoc
     libreoffice
     pciutils
+    unigine-superposition
 
     intel-vaapi-driver
     libva
