@@ -8,7 +8,7 @@
       enable = true;
       settings = {
         options = {
-          theme = "nord";
+          theme = "auto"; # Let stylix handle theming
           section_separators = {
             left = "";
             right = "";
@@ -20,7 +20,6 @@
     notify = {
       enable = true;
       settings = {
-        background_colour = "#000000";
         fps = 60;
         icons = {
           debug = "";

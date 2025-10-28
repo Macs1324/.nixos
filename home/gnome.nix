@@ -25,13 +25,6 @@
 
     # Interface settings - consistent with Hyprland's minimal approach
     "org/gnome/desktop/interface" = {
-      gtk-theme = "Adwaita-dark";
-      icon-theme = "Papirus-Dark";
-      cursor-theme = "Bibata-Modern-Ice";
-      cursor-size = 24;
-      font-name = "Inter 11";
-      document-font-name = "Inter 11";
-      monospace-font-name = "JetBrains Mono 12";
       show-battery-percentage = true;
       enable-animations = true;
       enable-hot-corners = false;
@@ -181,27 +174,6 @@
 
     # Terminal settings (GNOME Terminal as fallback)
     "org/gnome/terminal/legacy/profiles:/:b1dcc9dd-5262-4d8d-a863-c897e6d979b9" = {
-      background-color = "rgb(46,52,64)";
-      foreground-color = "rgb(216,222,233)";
-      palette = [
-        "rgb(46,52,64)" # base00 - dark
-        "rgb(191,97,106)" # base08 - red
-        "rgb(163,190,140)" # base0B - green
-        "rgb(235,203,139)" # base0A - yellow
-        "rgb(129,161,193)" # base0D - blue
-        "rgb(180,142,173)" # base0E - magenta
-        "rgb(136,192,208)" # base0C - cyan
-        "rgb(216,222,233)" # base05 - light
-        "rgb(76,86,106)" # base03 - bright dark
-        "rgb(191,97,106)" # base08 - bright red
-        "rgb(163,190,140)" # base0B - bright green
-        "rgb(235,203,139)" # base0A - bright yellow
-        "rgb(129,161,193)" # base0D - bright blue
-        "rgb(180,142,173)" # base0E - bright magenta
-        "rgb(136,192,208)" # base0C - bright cyan
-        "rgb(236,239,244)" # base07 - white
-      ];
-      use-theme-colors = false;
       use-theme-transparency = false;
       background-transparency-percent = 85;
       use-transparent-background = true;
@@ -240,23 +212,6 @@
   # Override GTK settings to ensure consistency with Nord theme
   gtk = {
     enable = true;
-    theme = {
-      name = "Adwaita-dark";
-      package = pkgs.gnome-themes-extra;
-    };
-    iconTheme = {
-      name = "Papirus-Dark";
-      package = pkgs.papirus-icon-theme;
-    };
-    cursorTheme = {
-      name = "Bibata-Modern-Ice";
-      package = pkgs.bibata-cursors;
-      size = 24;
-    };
-    font = {
-      name = "Inter";
-      size = 11;
-    };
 
     gtk3.extraConfig = {
       gtk-application-prefer-dark-theme = 1;
@@ -267,12 +222,5 @@
       gtk-application-prefer-dark-theme = 1;
       gtk-decoration-layout = "close,minimize,maximize:";
     };
-  };
-
-  # Qt theming to match GTK
-  qt = {
-    enable = true;
-    platformTheme.name = "adwaita";
-    style.name = "adwaita-dark";
   };
 }

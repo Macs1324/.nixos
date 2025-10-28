@@ -43,7 +43,6 @@
   boot.loader.grub.efiSupport = true;
   boot.loader.grub.useOSProber = true;
   boot.loader.grub.theme = pkgs.lib.mkForce pkgs.minimal-grub-theme;
-  boot.loader.grub.backgroundColor = "#2e3440";
   boot.loader.efi.canTouchEfiVariables = true;
 
   networking.hostName = "nixmacs"; # Define your hostname.

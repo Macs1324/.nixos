@@ -123,7 +123,9 @@
       };
     };
 
-    style = ''
+    style = let
+      colors = config.lib.stylix.colors;
+    in ''
       * {
         font-family: monospace;
         font-size: 12px;
@@ -131,9 +133,9 @@
       }
 
       window#waybar {
-        background: rgba(40, 44, 52, 0.9);
+        background: alpha(#${colors.base00}, 0.9);
         border-radius: 15px;
-        color: #f8f8f2;
+        color: #${colors.base05};
         transition-property: background-color;
         transition-duration: 0.3s;
       }
@@ -144,7 +146,7 @@
         margin: 2px 0;
         border-radius: 8px;
         background: transparent;
-        color: #ffffff;
+        color: #${colors.base07};
         border: 2px solid transparent;
         font-size: 20px;
         font-weight: bold;
@@ -152,57 +154,57 @@
       }
 
       #workspaces button:hover {
-        background: rgba(255, 255, 255, 0.1);
-        color: #ffffff;
+        background: alpha(#${colors.base07}, 0.1);
+        color: #${colors.base07};
       }
 
       window#waybar #workspaces button.active {
         background: transparent;
-        color: #ffffff;
-        border: 2px solid #81a1c1;
+        color: #${colors.base07};
+        border: 2px solid #${colors.base0D};
         font-weight: bold;
       }
 
       window#waybar #workspaces button.focused {
         background: transparent;
-        color: #ffffff;
-        border: 2px solid #81a1c1;
+        color: #${colors.base07};
+        border: 2px solid #${colors.base0D};
         font-weight: bold;
       }
 
       window#waybar #workspaces button.persistent {
         background: transparent;
-        color: #ffffff;
-        border: 2px solid #81a1c1;
+        color: #${colors.base07};
+        border: 2px solid #${colors.base0D};
         font-weight: bold;
       }
 
       window#waybar #workspaces button.current_output {
         background: transparent;
-        color: #ffffff;
-        border: 2px solid #81a1c1;
+        color: #${colors.base07};
+        border: 2px solid #${colors.base0D};
         font-weight: bold;
       }
 
       #workspaces button.urgent {
-        background: #ff5555;
-        color: #f8f8f2;
+        background: #${colors.base08};
+        color: #${colors.base05};
         animation: blink 0.5s linear infinite alternate;
       }
 
       @keyframes blink {
         to {
-          background: rgba(255, 85, 85, 0.5);
+          background: alpha(#${colors.base08}, 0.5);
         }
       }
 
       #custom-launcher:hover {
-        background: rgba(189, 147, 249, 0.2);
+        background: alpha(#${colors.base0E}, 0.2);
         border-radius: 8px;
       }
 
       #custom-power:hover {
-        background: rgba(255, 85, 85, 0.2);
+        background: alpha(#${colors.base08}, 0.2);
         border-radius: 8px;
       }
 
@@ -217,7 +219,7 @@
         padding: 8px 0;
         margin: 1px 0;
         background: transparent;
-        color: #f8f8f2;
+        color: #${colors.base05};
         font-size: 16px;
         transition: all 0.3s ease;
       }
@@ -230,51 +232,51 @@
       #battery:hover,
       #clock:hover,
       #custom-power:hover {
-        background: rgba(98, 114, 164, 0.8);
+        background: alpha(#${colors.base03}, 0.8);
       }
 
       #custom-launcher {
         background: transparent;
-        color: #bd93f9;
+        color: #${colors.base0E};
         font-size: 24px;
         padding: 12px 0;
       }
 
       #pulseaudio.muted {
-        color: #ff5555;
+        color: #${colors.base08};
       }
 
       #cpu.warning {
-        color: #f1fa8c;
+        color: #${colors.base0A};
       }
 
       #cpu.critical {
-        color: #ff5555;
+        color: #${colors.base08};
       }
 
       #memory.warning {
-        color: #f1fa8c;
+        color: #${colors.base0A};
       }
 
       #memory.critical {
-        color: #ff5555;
+        color: #${colors.base08};
       }
 
       #temperature.critical {
-        color: #ff5555;
+        color: #${colors.base08};
         animation: blink 0.5s linear infinite alternate;
       }
 
       #battery.charging {
-        color: #50fa7b;
+        color: #${colors.base0B};
       }
 
       #battery.warning:not(.charging) {
-        color: #f1fa8c;
+        color: #${colors.base0A};
       }
 
       #battery.critical:not(.charging) {
-        color: #ff5555;
+        color: #${colors.base08};
         animation: blink 0.5s linear infinite alternate;
       }
 
@@ -285,15 +287,15 @@
 
       #custom-power {
         background: transparent;
-        color: #ff5555;
+        color: #${colors.base08};
         font-size: 20px;
         padding: 10px 0;
       }
 
       #tray menu {
-        background: rgba(40, 44, 52, 0.95);
+        background: alpha(#${colors.base00}, 0.95);
         border-radius: 8px;
-        border: 1px solid rgba(98, 114, 164, 0.3);
+        border: 1px solid alpha(#${colors.base03}, 0.3);
       }
     '';
   };

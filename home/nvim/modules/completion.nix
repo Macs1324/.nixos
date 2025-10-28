@@ -316,11 +316,6 @@
     local cmp_autopairs = require('nvim-autopairs.completion.cmp')
     cmp.event:on('confirm_done', cmp_autopairs.on_confirm_done())
 
-    -- Highlight groups for completion
-    vim.api.nvim_set_hl(0, 'CmpPmenu', { bg = '#1e1e2e', fg = '#cdd6f4' })
-    vim.api.nvim_set_hl(0, 'CmpSel', { bg = '#313244', fg = '#cdd6f4', bold = true })
-    vim.api.nvim_set_hl(0, 'CmpDoc', { bg = '#181825', fg = '#cdd6f4' })
-
     -- Performance optimizations
     vim.opt.completeopt = 'menu,menuone,noselect'
     vim.opt.shortmess:append('c')

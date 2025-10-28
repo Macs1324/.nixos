@@ -18,8 +18,21 @@
   home.username = "macs";
   home.homeDirectory = "/home/macs";
 
+  stylix.enable = true;
   stylix.autoEnable = true;
   stylix.base16Scheme = "${pkgs.base16-schemes}/share/themes/nord.yaml";
+
+  stylix.fonts = {
+    monospace = {
+      package = pkgs.nerd-fonts.jetbrains-mono;
+      name = "JetBrainsMono Nerd Font";
+    };
+    sizes.terminal = 14;
+  };
+
+  stylix.opacity.terminal = 0.78;
+
+  stylix.targets.nixvim.enable = true;
 
   programs.git = {
     enable = true;
@@ -39,13 +52,6 @@
         dimensions = {
           lines = 3;
           columns = 200;
-        };
-        opacity = 0.4;
-      };
-      font = {
-        normal = {
-          family = "Hack Nerd Font Mono";
-          style = "Regular";
         };
       };
       keyboard.bindings = [
@@ -73,13 +79,7 @@
 
   programs.kitty = {
     enable = true;
-    themeFile = "Nord";
-    font = {
-      name = "JetBrainsMono Nerd Font";
-      size = 14;
-    };
     settings = {
-      background_opacity = "0.78";
       single_instance = "yes";
       enable_audio_bell = "no";
       visual_bell_duration = "0.0";
@@ -252,7 +252,6 @@
         gap_size = 6;
 
         # Text
-        font = "JetBrainsMono Nerd Font 10";
         line_height = 0;
         markup = "full";
         format = "<b>%s</b>\\n%b";
@@ -267,7 +266,6 @@
 
         # Icons
         enable_recursive_icon_lookup = true;
-        icon_theme = "Papirus-Dark";
         icon_position = "left";
         min_icon_size = 24;
         max_icon_size = 48;
@@ -295,28 +293,16 @@
       };
 
       urgency_low = {
-        background = "base00";
-        foreground = "base05";
-        frame_color = "base03";
-        highlight = "base0D";
         timeout = 8;
         default_icon = "dialog-information";
       };
 
       urgency_normal = {
-        background = "base00";
-        foreground = "base05";
-        frame_color = "base0D";
-        highlight = "base0D";
         timeout = 10;
         default_icon = "dialog-information";
       };
 
       urgency_critical = {
-        background = "base00";
-        foreground = "base08";
-        frame_color = "base08";
-        highlight = "base08";
         timeout = 0;
         default_icon = "dialog-error";
       };
