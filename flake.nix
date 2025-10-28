@@ -40,6 +40,8 @@
       homedesktop = "homedesktop";
     };
     pc = lib.strings.removeSuffix "\n" "${builtins.readFile ./pc}";
+
+    theme = "${pkgs.base16-schemes}/share/themes/gruvbox-dark.yaml";
   in {
     nixosConfigurations = {
       nixos = lib.nixosSystem {
@@ -49,7 +51,7 @@
           ./configuration.nix
         ];
         specialArgs = {
-          inherit pc zen-browser hyprland;
+          inherit pc zen-browser hyprland theme;
         };
       };
     };
@@ -67,6 +69,7 @@
             hyprland
             hyprland-qtutils
             stylix
+            theme
             ;
         };
       };

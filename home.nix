@@ -3,6 +3,7 @@
   pkgs,
   hyprland-qtutils,
   stylix,
+  theme,
   ...
 }: {
   imports = [
@@ -20,7 +21,7 @@
 
   stylix.enable = true;
   stylix.autoEnable = true;
-  stylix.base16Scheme = "${pkgs.base16-schemes}/share/themes/nord.yaml";
+  stylix.base16Scheme = theme;
 
   stylix.fonts = {
     monospace = {
