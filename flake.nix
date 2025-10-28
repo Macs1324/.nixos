@@ -41,7 +41,7 @@
     };
     pc = lib.strings.removeSuffix "\n" "${builtins.readFile ./pc}";
 
-    theme = "${pkgs.base16-schemes}/share/themes/gruvbox-dark.yaml";
+    theme = "${pkgs.base16-schemes}/share/themes/nord.yaml";
   in {
     nixosConfigurations = {
       nixos = lib.nixosSystem {
@@ -51,7 +51,12 @@
           ./configuration.nix
         ];
         specialArgs = {
-          inherit pc zen-browser hyprland theme;
+          inherit
+            pc
+            zen-browser
+            hyprland
+            theme
+            ;
         };
       };
     };

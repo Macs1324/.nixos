@@ -36,6 +36,7 @@
 
   stylix.targets.nixvim.enable = true;
   stylix.targets.zen-browser.profileNames = ["default"];
+  stylix.targets.firefox.profileNames = ["default"];
 
   programs.firefox = {
     enable = true;
