@@ -183,8 +183,9 @@
     };
   };
 
+  # Fastfetch - Deactivated in favor of pfetch (can be re-enabled anytime)
   programs.fastfetch = {
-    enable = true;
+    enable = false;
     settings = {
       logo = {
         type = "kitty";
@@ -230,7 +231,7 @@
     autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
     initContent = ''
-      fastfetch
+      pfetch
       alias nd="nix develop"
       alias nv="neovide --fork"
     '';
@@ -352,7 +353,15 @@
 
   home.packages = [
     hyprland-qtutils.packages."${pkgs.system}".default
+    pkgs.pfetch
   ];
+
+  # Pfetch configuration
+  home.sessionVariables = {
+    PF_INFO = "ascii title os kernel uptime pkgs memory";
+    PF_ASCII = "nixos";
+    PF_SEP = "  ";
+  };
 
   # This value determines the Home Manager release that your
   # configuration is compatible with. This helps avoid breakage
