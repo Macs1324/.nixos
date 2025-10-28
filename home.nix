@@ -32,7 +32,7 @@
     sizes.terminal = 14;
   };
 
-  stylix.opacity.terminal = 0.78;
+  # stylix.opacity.terminal = 0.78;
 
   stylix.targets.nixvim.enable = true;
   stylix.targets.zen-browser.profileNames = ["default"];
@@ -44,6 +44,9 @@
 
   programs.zen-browser = {
     enable = true;
+    profiles = {
+      default = {};
+    };
   };
 
   programs.bat = {
