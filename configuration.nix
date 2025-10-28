@@ -247,22 +247,11 @@
   stylix.autoEnable = true;
   stylix.base16Scheme = theme;
 
-  # Install firefox.
-  programs.firefox.enable = true;
   programs.java.enable = true;
   programs.hyprland = {
     enable = true;
     package = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
     portalPackage = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
-  };
-  programs.lazygit.enable = true;
-  programs.git = {
-    enable = true;
-    config = {
-      credential = {
-        helper = "store";
-      };
-    };
   };
   programs.zsh.enable = true;
   programs.nix-ld.enable = true;
@@ -304,7 +293,6 @@
     plantuml
     mermaid-cli
     networkmanagerapplet
-    cava
     pandoc
     libreoffice
     pciutils
@@ -345,8 +333,6 @@
     # Editors
     vim
     neovide
-    emacs
-    zed-editor
     code-cursor
 
     # CLI Tools
@@ -361,7 +347,6 @@
     gst_all_1.gstreamer
     xh
     htop
-    bat
     jq
     gnumake
     podman
@@ -372,7 +357,6 @@
     # Browsers
     google-chrome
     brave
-    zen-browser.packages."${system}".default
 
     # Creative tools
     blender

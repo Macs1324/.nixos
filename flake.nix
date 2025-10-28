@@ -61,6 +61,7 @@
         modules = [
           stylix.homeModules.stylix
           nixvim.homeModules.nixvim
+          zen-browser.homeModules.default
           ./home.nix
         ];
         extraSpecialArgs = {
@@ -70,6 +71,7 @@
             hyprland-qtutils
             stylix
             theme
+            zen-browser
             ;
         };
       };

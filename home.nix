@@ -4,6 +4,7 @@
   hyprland-qtutils,
   stylix,
   theme,
+  zen-browser,
   ...
 }: {
   imports = [
@@ -34,6 +35,39 @@
   stylix.opacity.terminal = 0.78;
 
   stylix.targets.nixvim.enable = true;
+  stylix.targets.zen-browser.profileNames = ["default"];
+
+  programs.firefox = {
+    enable = true;
+  };
+
+  programs.zen-browser = {
+    enable = true;
+  };
+
+  programs.bat = {
+    enable = true;
+  };
+
+  programs.emacs = {
+    enable = true;
+  };
+
+  programs.zed-editor = {
+    enable = true;
+  };
+
+  programs.lazygit = {
+    enable = true;
+  };
+
+  programs.cava = {
+    enable = true;
+  };
+
+  programs.btop = {
+    enable = true;
+  };
 
   programs.git = {
     enable = true;
