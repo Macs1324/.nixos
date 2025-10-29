@@ -32,9 +32,14 @@
     sizes.terminal = 14;
   };
 
-  # stylix.opacity.terminal = 0.78;
+  stylix.opacity.terminal = 0.78;
 
-  stylix.targets.nixvim.enable = true;
+  stylix.targets.nixvim = {
+    enable = true;
+    transparentBackground.main = true;
+    transparentBackground.numberLine = true;
+    transparentBackground.signColumn = true;
+  };
   stylix.targets.zen-browser.profileNames = ["default"];
   stylix.targets.firefox.profileNames = ["default"];
 
