@@ -80,8 +80,10 @@
 
   programs.git = {
     enable = true;
-    userName = "Macs1324";
-    userEmail = "max.blank410@gmail.com";
+    settings.user = {
+      name = "Macs1324";
+      email = "max.blank410@gmail.com";
+    };
   };
   programs.gh = {
     enable = true;
