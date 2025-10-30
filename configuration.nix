@@ -184,7 +184,7 @@
   # services.displayManager.sddm.enable = true;
   # services.displayManager.sddm.wayland.enable = true;
 
-  services.desktopManager.gnome.enable = true;
+  # services.desktopManager.gnome.enable = true;
   services.displayManager.gdm.enable = true;
 
   # Configure keymap in X11
@@ -392,7 +392,7 @@
     lutris
 
     # Dev tools
-    pgadmin
+    pgadmin4
     insomnia
     git-lfs
     gource
