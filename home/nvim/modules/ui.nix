@@ -8,7 +8,7 @@
       enable = true;
       settings = {
         options = {
-          theme = "auto"; # Let stylix handle theming
+          theme = "nord";
           section_separators = {
             left = "";
             right = "";

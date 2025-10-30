@@ -36,6 +36,9 @@ in {
     globals.mapleader = " ";
     globals.neovide_opacity = 0.8;
 
+    # Enable nord colorscheme
+    colorschemes.nord.enable = true;
+
     clipboard = {
       providers.wl-copy.enable = true; # for Wayland
       register = "unnamedplus";

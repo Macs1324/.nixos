@@ -34,13 +34,8 @@
 
   stylix.opacity.terminal = 0.78;
 
-  stylix.targets.nixvim = {
-    enable = true;
-    transparentBackground.main = true;
-    transparentBackground.numberLine = true;
-    transparentBackground.signColumn = true;
-  };
-  stylix.targets.zen-browser.profileNames = ["default"];
+  stylix.targets.nixvim.enable = false;
+  stylix.targets.zen-browser.enable = false;
   stylix.targets.firefox.profileNames = ["default"];
 
   programs.firefox = {
