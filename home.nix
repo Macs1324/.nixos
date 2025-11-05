@@ -36,6 +36,7 @@
 
   stylix.targets.nixvim.enable = false;
   stylix.targets.zen-browser.enable = false;
+  stylix.targets.hyprlock.enable = false;
   stylix.targets.firefox.profileNames = ["default"];
 
   programs.firefox = {
