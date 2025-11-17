@@ -271,6 +271,11 @@
   };
   virtualisation.docker.enable = true;
 
+  programs.virt-manager.enable = true;
+  users.groups.libvirtd.members = ["macs"];
+  virtualisation.libvirtd.enable = true;
+  virtualisation.spiceUSBRedirection.enable = true;
+
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
 
