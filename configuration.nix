@@ -248,6 +248,7 @@
   stylix.base16Scheme = theme;
 
   programs.java.enable = true;
+  programs.firejail.enable = true;
   programs.hyprland = {
     enable = true;
     package = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
