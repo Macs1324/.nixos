@@ -269,12 +269,10 @@
         Port 22
     '';
   };
-  virtualisation.docker.enable = true;
-
-  programs.virt-manager.enable = true;
-  users.groups.libvirtd.members = ["macs"];
-  virtualisation.libvirtd.enable = true;
-  virtualisation.spiceUSBRedirection.enable = true;
+  virtualisation.podman = {
+    enable = true;
+    dockerCompat = true;
+  };
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
@@ -304,6 +302,7 @@
     libreoffice
     pciutils
     unigine-superposition
+    distrobox
 
     intel-vaapi-driver
     libva
