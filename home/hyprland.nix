@@ -194,9 +194,9 @@
               ]
               else []
             );
-          windowrulev2 = [
-            "float,class:(clipse)"
-            "size 622 652,class:(clipse)"
+          windowrule = [
+            "match:class = clipse, float on"
+            "match:class = clipse, size 622 652"
           ];
           bind =
             [
@@ -269,7 +269,7 @@
             "windows,1,3.0,overshot,gnomed"
           ];
           layerrule = [
-            "animation slide, notifications"
+            "match:class = notifications, animation slide"
           ];
         };
       };
