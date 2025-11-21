@@ -301,7 +301,6 @@
     pandoc
     libreoffice
     pciutils
-    unigine-superposition
     distrobox
 
     intel-vaapi-driver
