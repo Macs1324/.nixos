@@ -254,6 +254,9 @@
     package = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
     portalPackage = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
   };
+
+  programs.niri.enable = true;
+
   programs.zsh.enable = true;
   services.envfs.enable = true;
   programs.nix-ld.enable = true;
@@ -324,6 +327,7 @@
     linuxHeaders
     clinfo
     imagemagick
+    xwayland-satellite
 
     # Programming languages
     nodejs

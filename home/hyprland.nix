@@ -127,10 +127,13 @@
   wayland = {
     windowManager.hyprland = {
       enable = true;
-      package = null;
-      portalPackage = null;
+
+      package = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
+      # portalPackage = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
+
       plugins = [
       ];
+
       xwayland.enable = true;
       settings = {
         general = {

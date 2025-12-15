@@ -5,10 +5,12 @@
   stylix,
   theme,
   zen-browser,
+  niri,
   ...
 }: {
   imports = [
     ./home/hyprland.nix
+    ./home/niri.nix
     ./home/gnome.nix
     ./home/eww.nix
     ./home/waybar.nix
