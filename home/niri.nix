@@ -68,11 +68,11 @@
 
       outputs."HDMI-A-2" = {
         mode = {
-          width = 3840;
-          height = 2160;
-          refresh = 59.98;
+          width = 2560;
+          height = 1440;
+          refresh = 144.00;
         };
-        scale = 1.5;
+        scale = 1.0;
         transform = {
           rotation = 0;
           flipped = false;
