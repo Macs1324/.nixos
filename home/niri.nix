@@ -226,7 +226,7 @@
           hotkey-overlay.title = "Open a Terminal: kitty";
         };
         "Mod+O" = {
-          action.spawn-sh = "wofi --show drun";
+          action.spawn-sh = "noctalia-shell ipc call launcher toggle";
           hotkey-overlay.title = "Application menu";
         };
         "Ctrl+Alt+L" = {
