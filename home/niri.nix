@@ -87,6 +87,9 @@
         gaps = 16;
         center-focused-column = "never";
 
+        # Transparent background so the backdrop wallpaper is visible
+        background-color = "transparent";
+
         preset-column-widths = [
           {proportion = 0.33333;}
           {proportion = 0.5;}
@@ -129,6 +132,12 @@
           top = 0.0;
           bottom = 0.0;
         };
+      };
+
+      # Overview settings
+      overview = {
+        # Disable workspace shadows in overview for cleaner backdrop wallpaper
+        workspace-shadow.enable = false;
       };
 
       # Spawn programs at startup
@@ -186,16 +195,22 @@
         # }
 
         # Example: enable rounded corners for all windows (commented out)
-        # {
-        #   matches = [{}];
-        #   geometry-corner-radius = {
-        #     top-left = 12.0;
-        #     top-right = 12.0;
-        #     bottom-left = 12.0;
-        #     bottom-right = 12.0;
-        #   };
-        #   clip-to-geometry = true;
-        # }
+        {
+          matches = [{}];
+          geometry-corner-radius = {
+            top-left = 12.0;
+            top-right = 12.0;
+            bottom-left = 12.0;
+            bottom-right = 12.0;
+          };
+          clip-to-geometry = true;
+        }
+      ];
+      layer-rules = [
+        {
+          matches = [{namespace = "^noctalia-wallpaper.*";}];
+          place-within-backdrop = true;
+        }
       ];
 
       # Keybindings
