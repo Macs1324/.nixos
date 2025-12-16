@@ -248,6 +248,9 @@
   stylix.base16Scheme = theme;
 
   programs.java.enable = true;
+
+  programs.thunar.enable = true;
+
   programs.firejail.enable = true;
   programs.hyprland = {
     enable = true;
