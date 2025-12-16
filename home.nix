@@ -13,7 +13,6 @@
     ./home/niri.nix
     ./home/gnome.nix
     ./home/eww.nix
-    ./home/waybar.nix
     ./home/wlogout.nix
     ./home/nvim
   ];

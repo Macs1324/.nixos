@@ -152,7 +152,7 @@
           animate_mouse_windowdragging = true;
         };
         exec-once = [
-          "waybar"
+          "noctalia-shell"
           "nm-applet"
           "hyprpaper"
           "exec-once = clipse -listen"
