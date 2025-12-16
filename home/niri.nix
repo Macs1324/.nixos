@@ -225,21 +225,18 @@
           action.spawn = "kitty";
           hotkey-overlay.title = "Open a Terminal: kitty";
         };
+        "Mod+E" = {
+          action.spawn = "thunar";
+          hotkey-overlay.title = "Open a File manager: thunar";
+        };
         "Mod+O" = {
           action.spawn-sh = "noctalia-shell ipc call launcher toggle";
           hotkey-overlay.title = "Application menu";
         };
         "Ctrl+Alt+L" = {
-          action.spawn = "hyprlock";
-          hotkey-overlay.title = "Lock the Screen: hyprlock";
+          action.spawn-sh = "noctalia-shell ipc call lockScreen lock";
+          hotkey-overlay.title = "Lock the Screen";
         };
-
-        # # Screen reader toggle
-        # "Super+Alt+S" = {
-        #   action.spawn-sh = "pkill orca || exec orca";
-        #   allow-when-locked = true;
-        #   hotkey-overlay.hidden = true;
-        # };
 
         # Volume controls
         "XF86AudioRaiseVolume" = {
