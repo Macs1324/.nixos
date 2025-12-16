@@ -278,63 +278,63 @@
       };
     };
   };
-  services.hyprpaper =
-    if pc == "workdesktop"
-    then let
-      wallpaper = "~/.nixos/assets/wallpapers/workdesktop";
-    in {
-      enable = true;
-      settings = {
-        ipc = "on";
-        splash = false;
-        preload = [
-          "${wallpaper}-1.png"
-          "${wallpaper}-2.png"
-        ];
-        wallpaper = [
-          "DP-1,${wallpaper}-1.png"
-          "HDMI-A-2,${wallpaper}-2.png"
-        ];
-      };
-    }
-    else if pc == "homedesktop"
-    then let
-      wallpaper = "~/.nixos/assets/wallpapers/homedesktop";
-    in {
-      enable = true;
-      settings = {
-        ipc = "on";
-        splash = "false";
-        preload = [
-          "${wallpaper}-1.jpg"
-          "${wallpaper}-2.png"
-        ];
-        wallpaper = [
-          "DP-2,${wallpaper}-1.jpg"
-          "HDMI-A-2,${wallpaper}-2.png"
-        ];
-      };
-    }
-    else let
-      wallpaper_path = "~/.nixos/assets/wallpapers/${pc}.jpg";
-      display =
-        if pc == "worklaptop"
-        then "eDP-1"
-        else "DP-2";
-    in {
-      enable = true;
-      settings = {
-        ipc = "on";
-        splash = false;
-        # splash_offset = 2.0;
-
-        preload = [wallpaper_path];
-
-        wallpaper = [
-          "${display},${wallpaper_path}"
-        ];
-      };
-    };
+  # services.hyprpaper =
+  #   if pc == "workdesktop"
+  #   then let
+  #     wallpaper = "~/.nixos/assets/wallpapers/workdesktop";
+  #   in {
+  #     enable = true;
+  #     settings = {
+  #       ipc = "on";
+  #       splash = false;
+  #       preload = [
+  #         "${wallpaper}-1.png"
+  #         "${wallpaper}-2.png"
+  #       ];
+  #       wallpaper = [
+  #         "DP-1,${wallpaper}-1.png"
+  #         "HDMI-A-2,${wallpaper}-2.png"
+  #       ];
+  #     };
+  #   }
+  #   else if pc == "homedesktop"
+  #   then let
+  #     wallpaper = "~/.nixos/assets/wallpapers/homedesktop";
+  #   in {
+  #     enable = true;
+  #     settings = {
+  #       ipc = "on";
+  #       splash = "false";
+  #       preload = [
+  #         "${wallpaper}-1.jpg"
+  #         "${wallpaper}-2.png"
+  #       ];
+  #       wallpaper = [
+  #         "DP-2,${wallpaper}-1.jpg"
+  #         "HDMI-A-2,${wallpaper}-2.png"
+  #       ];
+  #     };
+  #   }
+  #   else let
+  #     wallpaper_path = "~/.nixos/assets/wallpapers/${pc}.jpg";
+  #     display =
+  #       if pc == "worklaptop"
+  #       then "eDP-1"
+  #       else "DP-2";
+  #   in {
+  #     enable = true;
+  #     settings = {
+  #       ipc = "on";
+  #       splash = false;
+  #       # splash_offset = 2.0;
+  #
+  #       preload = [wallpaper_path];
+  #
+  #       wallpaper = [
+  #         "${display},${wallpaper_path}"
+  #       ];
+  #     };
+  #   };
   programs.hyprlock = {
     enable = true;
     settings = {
