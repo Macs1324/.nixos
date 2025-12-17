@@ -308,6 +308,7 @@
     libreoffice
     pciutils
     distrobox
+    wl-mirror
 
     intel-vaapi-driver
     libva
