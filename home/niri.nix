@@ -120,6 +120,24 @@
               };
             };
           };
+          "worklaptop" = {
+            "eDP=1" = {
+              mode = {
+                width = 2880;
+                height = 1800;
+                refresh = 120.001;
+              };
+              scale = 1.0;
+              transform = {
+                rotation = 0;
+                flipped = false;
+              };
+              position = {
+                x = 0;
+                y = 0;
+              };
+            };
+          };
         }
         .${
           pc
