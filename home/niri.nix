@@ -48,39 +48,82 @@
 
       # Output configuration
       # Uncomment and adjust for your specific displays
-      outputs."DP-1" = {
-        mode = {
-          width = 3440;
-          height = 1440;
-          refresh = 165.00;
-        };
-        scale = 1.0;
-        transform = {
-          rotation = 0;
-          flipped = false;
-        };
-        position = {
-          x = 0;
-          y = 0;
-        };
-      };
+      outputs =
+        {
+          "workdesktop" = {
+            "DP-1" = {
+              mode = {
+                width = 3440;
+                height = 1440;
+                refresh = 165.00;
+              };
+              scale = 1.0;
+              transform = {
+                rotation = 0;
+                flipped = false;
+              };
+              position = {
+                x = 0;
+                y = 0;
+              };
+            };
 
-      outputs."HDMI-A-2" = {
-        mode = {
-          width = 2560;
-          height = 1440;
-          refresh = 144.00;
+            "HDMI-A-2" = {
+              mode = {
+                width = 2560;
+                height = 1440;
+                refresh = 144.00;
+              };
+              scale = 1.0;
+              transform = {
+                rotation = 0;
+                flipped = false;
+              };
+              position = {
+                x = 3440;
+                y = 0;
+              };
+            };
+          };
+          "homedesktop" = {
+            "DP-2" = {
+              mode = {
+                width = 2560;
+                height = 1440;
+                refresh = 170.017;
+              };
+              scale = 1.0;
+              transform = {
+                rotation = 0;
+                flipped = false;
+              };
+              position = {
+                x = 0;
+                y = 0;
+              };
+            };
+
+            "HDMI-A-2" = {
+              mode = {
+                width = 1920;
+                height = 1080;
+                refresh = 60.00;
+              };
+              scale = 1.0;
+              transform = {
+                rotation = 0;
+                flipped = false;
+              };
+              position = {
+                x = 2560;
+                y = 0;
+              };
+            };
+          };
+        }
+        .${
+          pc
         };
-        scale = 1.0;
-        transform = {
-          rotation = 0;
-          flipped = false;
-        };
-        position = {
-          x = 3440;
-          y = 0;
-        };
-      };
 
       # Layout settings
       layout = {
