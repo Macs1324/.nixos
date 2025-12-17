@@ -23,7 +23,7 @@
 
         touchpad = {
           tap = true;
-          natural-scroll = true;
+          natural-scroll = false;
           # dwt = true;
           # dwtp = true;
           # accel-speed = 0.2;
