@@ -313,6 +313,7 @@
     pciutils
     distrobox
     wl-mirror
+    quickshell
 
     intel-vaapi-driver
     libva
