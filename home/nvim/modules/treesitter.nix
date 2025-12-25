@@ -6,6 +6,29 @@
   plugins = {
     treesitter = {
       enable = true;
+
+      # Explicitly declare grammars instead of auto_install
+      grammarPackages = with pkgs.vimPlugins.nvim-treesitter.builtGrammars; [
+        bash
+        c
+        cpp
+        css
+        html
+        javascript
+        json
+        lua
+        markdown
+        markdown_inline
+        nix
+        python
+        rust
+        svelte
+        tsx
+        typescript
+        vim
+        yaml
+      ];
+
       settings = {
         highlight = {
           enable = true;
@@ -14,11 +37,12 @@
             "markdown"
           ];
         };
-        auto_install = true;
-        indent_enable = true;
-        folding = true;
-        autoLoad = true;
-        incremental_selection.enable = true;
+        indent = {
+          enable = true;
+        };
+        incremental_selection = {
+          enable = true;
+        };
       };
     };
     treesitter-context = {

@@ -31,7 +31,7 @@
     {
       mode = "n";
       key = "<Esc>";
-      action = "<cmd>lua if vim.v.hlsearch == 1 then vim.cmd('noh') end<cr>";
+      action.__raw = "function() if vim.v.hlsearch == 1 then vim.cmd('noh') end end";
       options = {
         silent = true;
         desc = "Clear search highlighting if active";
