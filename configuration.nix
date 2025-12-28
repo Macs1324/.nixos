@@ -80,6 +80,30 @@
   hardware.firmware = with pkgs; [linux-firmware];
   hardware.enableAllFirmware = true;
 
+  hardware.bluetooth = {
+    enable = true;
+    powerOnBoot = true;
+
+    settings = {
+      General = {
+        experimental = true;
+        Privacy = "device";
+        JustWorksRepairing = "always";
+        FastConnectable = true;
+      };
+      Policy = {
+        AutoEnable = true;
+      };
+    };
+  };
+
+  services.blueman.enable = true;
+  hardware.xpadneo.enable = true;
+  boot.extraModulePackages = with config.boot.kernelPackages; [xpadneo];
+  boot.extraModprobeConfig = ''
+    options bluetooth disable_ertm=Y
+  '';
+
   # Enable OpenGL
   hardware.graphics =
     if pc == "homedesktop"
