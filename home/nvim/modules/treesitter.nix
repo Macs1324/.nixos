@@ -8,26 +8,7 @@
       enable = true;
 
       # Explicitly declare grammars instead of auto_install
-      grammarPackages = with pkgs.vimPlugins.nvim-treesitter.builtGrammars; [
-        bash
-        c
-        cpp
-        css
-        html
-        javascript
-        json
-        lua
-        markdown
-        markdown_inline
-        nix
-        python
-        rust
-        svelte
-        tsx
-        typescript
-        vim
-        yaml
-      ];
+      grammarPackages = pkgs.vimPlugins.nvim-treesitter.allGrammars;
 
       settings = {
         highlight = {
