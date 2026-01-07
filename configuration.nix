@@ -408,6 +408,7 @@
     krita
     gimp
     audacity
+    davinci-resolve
 
     # LaTeX
     (pkgs.texlive.combine {
