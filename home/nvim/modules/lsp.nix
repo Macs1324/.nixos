@@ -15,8 +15,11 @@
         clangd.enable = true; # C and C++
         basedpyright.enable = true; # Python LSP
         tailwindcss.enable = true;
-        cucumber_language_server.enable = true;
-        cucumber_language_server.package = null;
+        cucumber_language_server = {
+          enable = true;
+          package = null;
+        };
+        texlab.enable = true;
       };
     };
   };
