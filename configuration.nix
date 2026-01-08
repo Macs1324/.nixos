@@ -426,6 +426,8 @@
         ulem
         hyperref
         capt-of
+        datetime2
+        tcolorbox
         ;
       #(setq org-latex-compiler "lualatex")
       #(setq org-preview-latex-default-process 'dvisvgm)
