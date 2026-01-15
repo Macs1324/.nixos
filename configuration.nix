@@ -338,6 +338,7 @@
     distrobox
     wl-mirror
     quickshell
+    gpu-screen-recorder
 
     intel-vaapi-driver
     libva
