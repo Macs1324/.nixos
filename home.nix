@@ -356,6 +356,7 @@
   home.sessionPath = [
     "$HOME/.npm-global/bin"
     "$HOME/.cargo/bin"
+    "$HOME/.local/bin"
   ];
 
   home.packages = [
