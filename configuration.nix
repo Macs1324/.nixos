@@ -392,6 +392,7 @@
     htop
     jq
     gnumake
+    cmake
     podman
     podman-compose
     viu
