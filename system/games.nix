@@ -11,5 +11,6 @@
     webcord
     prismlauncher
     spotify
+    davinci-resolve
   ];
 }

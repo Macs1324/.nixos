@@ -410,7 +410,6 @@
     krita
     gimp
     audacity
-    davinci-resolve
 
     # LaTeX
     (pkgs.texlive.combine {
@@ -435,12 +434,8 @@
       #(setq org-preview-latex-default-process 'dvisvgm)
     })
 
-    # Gaming
-    lutris
-
     # Dev tools
     pgadmin4
-    insomnia
     git-lfs
     gource
   ];
