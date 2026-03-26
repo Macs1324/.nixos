@@ -15,6 +15,7 @@
     ./home/eww.nix
     ./home/wlogout.nix
     ./home/nvim
+    ./home/ai.nix
   ];
   # Home Manager needs a bit of information about you and the
   # paths it should manage.
