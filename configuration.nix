@@ -397,6 +397,7 @@
     podman-compose
     viu
     just
+    fastfetch
 
     # Browsers
     google-chrome
