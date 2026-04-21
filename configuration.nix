@@ -339,6 +339,8 @@
     wl-mirror
     quickshell
     gpu-screen-recorder
+    gnupg
+    pinentry-qt
 
     intel-vaapi-driver
     libva
