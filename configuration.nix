@@ -337,7 +337,7 @@
     pciutils
     distrobox
     wl-mirror
-    quickshell
+    noctalia-qs
     gpu-screen-recorder
     gnupg
     pinentry-qt
