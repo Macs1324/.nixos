@@ -327,6 +327,7 @@
     bzip2
     obs-studio
     vlc
+    protonvpn-gui
     hyprpaper
     flatpak
     plantuml
