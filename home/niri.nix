@@ -291,11 +291,11 @@
           hotkey-overlay.title = "Open a File manager: thunar";
         };
         "Mod+O" = {
-          action.spawn-sh = "noctalia ipc call launcher toggle";
+          action.spawn-sh = "noctalia msg panel-toggle launcher";
           hotkey-overlay.title = "Application menu";
         };
         "Ctrl+Alt+L" = {
-          action.spawn-sh = "noctalia ipc call lockScreen lock";
+          action.spawn-sh = "noctalia msg screen-lock";
           hotkey-overlay.title = "Lock the Screen";
         };
 
