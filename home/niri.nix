@@ -203,7 +203,7 @@
 
       # Spawn programs at startup
       spawn-at-startup = [
-        {argv = ["noctalia-shell"];}
+        {argv = ["noctalia"];}
       ];
 
       # Hotkey overlay settings
@@ -291,11 +291,11 @@
           hotkey-overlay.title = "Open a File manager: thunar";
         };
         "Mod+O" = {
-          action.spawn-sh = "noctalia-shell ipc call launcher toggle";
+          action.spawn-sh = "noctalia ipc call launcher toggle";
           hotkey-overlay.title = "Application menu";
         };
         "Ctrl+Alt+L" = {
-          action.spawn-sh = "noctalia-shell ipc call lockScreen lock";
+          action.spawn-sh = "noctalia ipc call lockScreen lock";
           hotkey-overlay.title = "Lock the Screen";
         };
 
