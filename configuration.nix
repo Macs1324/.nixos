@@ -286,6 +286,20 @@
     portalPackage = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;
   };
 
+  xdg.portal = {
+    enable = true;
+    extraPortals = with pkgs; [
+      xdg-desktop-portal-gtk
+    ];
+    config = {
+      common.default = ["gtk"];
+      hyprland.default = [
+        "hyprland"
+        "gtk"
+      ];
+    };
+  };
+
   programs.niri.enable = true;
 
   programs.zsh.enable = true;
