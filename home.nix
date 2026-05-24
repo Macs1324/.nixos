@@ -41,6 +41,10 @@
   stylix.targets.hyprlock.enable = false;
   stylix.targets.firefox.profileNames = ["default"];
 
+  xdg.portal.extraPortals = [
+    pkgs.xdg-desktop-portal-gtk
+  ];
+
   programs.firefox = {
     enable = true;
   };
