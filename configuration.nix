@@ -274,6 +274,7 @@
   stylix.enable = true;
   stylix.autoEnable = true;
   stylix.base16Scheme = theme;
+  stylix.targets.kmscon.enable = false;
 
   programs.java.enable = true;
 
@@ -333,6 +334,9 @@
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
+  nixpkgs.config.permittedInsecurePackages = [
+    "electron-39.8.10" # bitwarden-desktop
+  ];
 
   # List packages installed in system profile. To search, run:
   # $ nix search wget
@@ -350,7 +354,7 @@
     bzip2
     obs-studio
     vlc
-    protonvpn-gui
+    proton-vpn
     hyprpaper
     flatpak
     plantuml
