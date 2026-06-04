@@ -9,7 +9,6 @@
   environment.systemPackages = with pkgs;
     [
       android-studio
-      redis
       sqlitebrowser
     ]
     ++ (
@@ -26,9 +25,4 @@
         pc
       }
     );
-
-  services.redis.servers."uxstream" = {
-    enable = true;
-    port = 6379;
-  };
 }
