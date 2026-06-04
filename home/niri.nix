@@ -295,7 +295,7 @@
           hotkey-overlay.title = "Application menu";
         };
         "Ctrl+Alt+L" = {
-          action.spawn-sh = "noctalia msg screen-lock";
+          action.spawn-sh = "noctalia msg session lock";
           hotkey-overlay.title = "Lock the Screen";
         };
 
