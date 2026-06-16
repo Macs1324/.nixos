@@ -208,7 +208,7 @@
 
       # Hotkey overlay settings
       hotkey-overlay = {
-        skip-at-startup = false;
+        skip-at-startup = true;
       };
 
       # Ask clients to omit CSD if possible
