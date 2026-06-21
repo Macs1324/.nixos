@@ -158,7 +158,6 @@
           "exec-once = clipse -listen"
         ];
         dwindle = {
-          pseudotile = true;
           smart_split = true;
           preserve_split = true;
         };
