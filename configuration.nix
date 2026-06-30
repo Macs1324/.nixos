@@ -362,6 +362,7 @@
     hyprpaper
     flatpak
     plantuml
+    asciidoc-full
     mermaid-cli
     networkmanagerapplet
     pandoc
