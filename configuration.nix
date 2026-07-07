@@ -209,7 +209,7 @@
     enable = true;
     wayland.enable = true;
     theme = "sddm-astronaut-theme";
-    extraPackages = [pkgs.sddm-astronaut];
+    extraPackages = [(pkgs.sddm-astronaut.override {embeddedTheme = "pixel_sakura";})];
   };
 
   # services.desktopManager.gnome.enable = true;
@@ -373,7 +373,7 @@
     gpu-screen-recorder
     gnupg
     pinentry-qt
-    sddm-astronaut
+    (sddm-astronaut.override {embeddedTheme = "pixel_sakura";})
 
     intel-vaapi-driver
     libva
