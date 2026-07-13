@@ -448,27 +448,27 @@
     audacity
 
     # LaTeX
-    (pkgs.texlive.combine {
-      inherit
-        (pkgs.texlive)
-        scheme-medium
-        dvisvgm
-        dvipng # for preview and export as html
-        wrapfig
-        amsmath
-        moresize
-        fontawesome5
-        geometry
-        raleway
-        ulem
-        hyperref
-        capt-of
-        datetime2
-        tcolorbox
-        ;
-      #(setq org-latex-compiler "lualatex")
-      #(setq org-preview-latex-default-process 'dvisvgm)
-    })
+    (pkgs.texliveSmall.withPackages (
+      ps:
+        with ps; [
+          scheme-medium
+          dvisvgm
+          dvipng # for preview and export as html
+          wrapfig
+          amsmath
+          moresize
+          fontawesome5
+          geometry
+          raleway
+          ulem
+          hyperref
+          capt-of
+          datetime2
+          tcolorbox
+          #(setq org-latex-compiler "lualatex")
+          #(setq org-preview-latex-default-process 'dvisvgm)
+        ]
+    ))
 
     # Dev tools
     pgadmin4
