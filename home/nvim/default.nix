@@ -1,7 +1,6 @@
 {
   config,
   pkgs,
-  pc,
   ...
 }: let
   # Import all modules from the modules directory
@@ -34,6 +33,8 @@ in {
   programs.nixvim = {
     enable = true;
     globals.mapleader = " ";
+    # Neovide reads opacity during its initial UI setup. Keep this as an early
+    # global instead of setting it from the later extraConfigLua block.
     globals.neovide_opacity = 0.8;
 
     # Enable nord colorscheme
@@ -53,4 +54,21 @@ in {
     extraLuaPackages = ps: [ps.magick];
     extraPackages = [pkgs.imagemagick];
   };
+
+  # Settings that must be known before Neovim starts belong in Neovide's own
+  # config. Runtime and keybinding settings live in modules/neovide.nix.
+  xdg.configFile."neovide/config.toml".text = ''
+    fork = true
+    frame = "full"
+    idle = true
+    startup-message-capture = true
+    tabs = false
+    title-hidden = false
+    vsync = true
+    wayland-app-id = "neovide"
+
+    [font]
+    normal = ["JetBrainsMono Nerd Font"]
+    size = 14.0
+  '';
 }

@@ -1,5 +1,6 @@
 {
   config,
+  lib,
   pkgs,
   pc,
   niri,
@@ -10,6 +11,45 @@
   programs.niri = {
     enable = true;
     package = pkgs.niri-unstable;
+    # niri-flake's typed settings currently lag behind the installed Niri
+    # package for background-effect. Render the typed settings normally, then
+    # append the one new rule as raw KDL.
+    config = let
+      renderedSettings =
+        (
+          lib.evalModules {
+            modules = [
+              niri.lib.internal.settings-module
+              {
+                programs.niri.settings = config.programs.niri.settings;
+              }
+            ];
+          }
+        ).config.programs.niri.finalConfig;
+    in
+      renderedSettings
+      + ''
+
+        window-rule {
+          match app-id="^neovide$"
+
+          background-effect {
+            blur true
+          }
+        }
+
+        window-rule {
+          match app-id="^kitty$"
+          match app-id="^Alacritty$"
+          match app-id="^com.mitchellh.ghostty$"
+          match app-id="^org.wezfurlong.wezterm$"
+          match app-id="^clipse$"
+
+          background-effect {
+            blur true
+          }
+        }
+      '';
     settings = {
       # Input configuration
       input = {
