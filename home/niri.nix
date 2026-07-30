@@ -16,16 +16,14 @@
     # append the one new rule as raw KDL.
     config = let
       renderedSettings =
-        (
-          lib.evalModules {
-            modules = [
-              niri.lib.internal.settings-module
-              {
-                programs.niri.settings = config.programs.niri.settings;
-              }
-            ];
-          }
-        ).config.programs.niri.finalConfig;
+        (lib.evalModules {
+          modules = [
+            niri.lib.internal.settings-module
+            {
+              programs.niri.settings = config.programs.niri.settings;
+            }
+          ];
+        }).config.programs.niri.finalConfig;
     in
       renderedSettings
       + ''
@@ -35,6 +33,7 @@
 
           background-effect {
             blur true
+            xray false
           }
         }
 
@@ -47,6 +46,7 @@
 
           background-effect {
             blur true
+            xray false
           }
         }
       '';
