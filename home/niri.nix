@@ -49,6 +49,27 @@
             xray false
           }
         }
+
+        // Noctalia publishes precise blur regions through
+        // ext-background-effect. Use regular blur for its shell surfaces
+        // instead of Niri's default wallpaper-only xray blur.
+        layer-rule {
+          match namespace="^noctalia-(bar-[^\"]+|notification|dock|panel|attached-panel|osd)$"
+
+          background-effect {
+            xray false
+          }
+        }
+
+        // The window switcher does not publish its own blur region.
+        layer-rule {
+          match namespace="^noctalia-window-switcher$"
+
+          background-effect {
+            blur true
+            xray false
+          }
+        }
       '';
     settings = {
       # Input configuration
