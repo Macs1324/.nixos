@@ -24,7 +24,15 @@
       enable = true;
       autoLoad = true;
     };
-    neoscroll.enable = true;
+    neoscroll = {
+      enable = true;
+      callSetup = false;
+      luaConfig.post = ''
+        if not vim.g.neovide then
+          require("neoscroll").setup()
+        end
+      '';
+    };
   };
 
   keymaps = [
