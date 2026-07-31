@@ -219,7 +219,7 @@
         ];
 
         default-column-width = {
-          proportion = 0.5;
+          proportion = 0.33333;
         };
 
         focus-ring = {
