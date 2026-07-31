@@ -130,6 +130,19 @@
     enable = true;
     settings = {
       single_instance = "yes";
+
+      # Neovide-like motion: animate cursor jumps and fade the blink smoothly.
+      cursor_trail = "1";
+      cursor_trail_decay = "0.08 0.22";
+      cursor_trail_start_threshold = "1";
+      cursor_blink_interval = "0.5 ease-in-out";
+
+      # Keep the pointer out of the way while typing and retain precise,
+      # sub-line touchpad scrolling in Kitty's scrollback buffer.
+      mouse_hide_wait = "-1.0";
+      pixel_scroll = "yes";
+      wheel_scroll_multiplier = "2.0";
+
       enable_audio_bell = "no";
       visual_bell_duration = "0.0";
       window_padding_width = "4";
