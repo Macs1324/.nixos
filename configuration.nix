@@ -335,6 +335,11 @@
     enable = true;
     dockerCompat = true;
   };
+  services.pcscd.enable = true;
+  programs.gnupg.agent = {
+    enable = true;
+    enableSSHSupport = true;
+  };
 
   # Allow unfree packages
   nixpkgs.config.allowUnfree = true;
@@ -374,6 +379,7 @@
     gnupg
     pinentry-qt
     (sddm-astronaut.override {embeddedTheme = "pixel_sakura";})
+    git-crypt
 
     intel-vaapi-driver
     libva
