@@ -314,7 +314,10 @@
     };
   };
 
-  programs.niri.enable = true;
+  programs.niri = {
+    enable = true;
+    package = pkgs.niri;
+  };
 
   programs.zsh.enable = true;
   services.envfs.enable = true;

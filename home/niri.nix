@@ -6,11 +6,9 @@
   niri,
   ...
 }: {
-  nixpkgs.overlays = [niri.overlays.niri];
-
   programs.niri = {
     enable = true;
-    package = pkgs.niri-unstable;
+    package = pkgs.niri;
     # niri-flake's typed settings currently lag behind the installed Niri
     # package for background-effect. Render the typed settings normally, then
     # append the one new rule as raw KDL.
