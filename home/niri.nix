@@ -13,12 +13,21 @@
     # package for background-effect. Render the typed settings normally, then
     # append the one new rule as raw KDL.
     config = let
+      # A fully evaluated settings value contains compatibility-only defaults.
+      # Do not feed those back into the nested module evaluation, because doing
+      # so makes removed options look explicitly configured.
+      settings =
+        config.programs.niri.settings
+        // {
+          animations = builtins.removeAttrs config.programs.niri.settings.animations ["shaders"];
+          cursor = builtins.removeAttrs config.programs.niri.settings.cursor ["hide-on-key-press"];
+        };
       renderedSettings =
         (lib.evalModules {
           modules = [
             niri.lib.internal.settings-module
             {
-              programs.niri.settings = config.programs.niri.settings;
+              programs.niri.settings = settings;
             }
           ];
         }).config.programs.niri.finalConfig;

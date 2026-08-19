@@ -10,13 +10,14 @@
       # Explicitly declare grammars instead of auto_install
       grammarPackages = pkgs.vimPlugins.nvim-treesitter.allGrammars;
 
+      highlight.disable = [
+        "latex"
+        "markdown"
+      ];
+
       settings = {
         highlight = {
           enable = true;
-          disable = [
-            "latex"
-            "markdown"
-          ];
         };
         indent = {
           enable = true;

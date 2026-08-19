@@ -32,6 +32,7 @@
 in {
   programs.nixvim = {
     enable = true;
+    nixpkgs.useGlobalPackages = true;
     globals.mapleader = " ";
     # Neovide reads opacity during its initial UI setup. Keep this as an early
     # global instead of setting it from the later extraConfigLua block.

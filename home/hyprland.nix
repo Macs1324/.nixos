@@ -127,6 +127,9 @@
   wayland = {
     windowManager.hyprland = {
       enable = true;
+      # Keep generating the existing Hyprlang configuration when Home Manager's
+      # state-version-dependent default changes in 26.05.
+      configType = "hyprlang";
 
       package = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.hyprland;
       # portalPackage = hyprland.packages.${pkgs.stdenv.hostPlatform.system}.xdg-desktop-portal-hyprland;

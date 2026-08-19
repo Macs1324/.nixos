@@ -47,6 +47,8 @@
 
   programs.firefox = {
     enable = true;
+    # Preserve the pre-26.05 profile location until it is migrated explicitly.
+    configPath = ".mozilla/firefox";
   };
 
   programs.zen-browser = {
@@ -379,7 +381,7 @@
   ];
 
   home.packages = [
-    hyprland-qtutils.packages."${pkgs.system}".default
+    hyprland-qtutils.packages."${pkgs.stdenv.hostPlatform.system}".default
     pkgs.pfetch
   ];
 
