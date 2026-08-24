@@ -29,7 +29,12 @@
       pc
     };
 
-  boot.kernelPackages = pkgs.linuxPackages_testing;
+  # The Arc B60 needs a newer kernel, but using the testing kernel on every
+  # machine also exposes the AMD gaming desktop to avoidable regressions.
+  boot.kernelPackages =
+    if pc == "workdesktop"
+    then pkgs.linuxPackages_latest
+    else pkgs.linuxPackages;
   boot.kernelParams =
     if pc == "workdesktop"
     then [
