@@ -222,8 +222,21 @@
 
   # Configure keymap in X11
 
-  # Enable CUPS to print documents.
-  services.printing.enable = true;
+  # Enable printing documents.
+  services.avahi = {
+    enable = true;
+    nssmdns4 = true;
+    openFirewall = true;
+  };
+
+  services.printing = {
+    enable = true;
+    drivers = with pkgs; [
+      cups-filters
+      cups-browsed
+    ];
+  };
+  services.ipp-usb.enable = true;
 
   # Enable sound with pipewire.
   services.pulseaudio.enable = false;
