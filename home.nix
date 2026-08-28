@@ -7,8 +7,7 @@
   zen-browser,
   niri,
   ...
-}:
-{
+}: {
   imports = [
     ./home/hyprland.nix
     ./home/niri.nix
@@ -40,7 +39,7 @@
   stylix.targets.nixvim.enable = false;
   stylix.targets.zen-browser.enable = false;
   stylix.targets.hyprlock.enable = false;
-  stylix.targets.firefox.profileNames = [ "default" ];
+  stylix.targets.firefox.profileNames = ["default"];
 
   xdg.portal.extraPortals = [
     pkgs.xdg-desktop-portal-gtk
@@ -55,7 +54,7 @@
   programs.zen-browser = {
     enable = true;
     profiles = {
-      default = { };
+      default = {};
     };
   };
 
