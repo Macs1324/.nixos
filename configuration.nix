@@ -401,6 +401,7 @@
     pinentry-qt
     (sddm-astronaut.override {embeddedTheme = "pixel_sakura";})
     git-crypt
+    tmux
 
     intel-vaapi-driver
     libva
