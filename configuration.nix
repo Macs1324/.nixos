@@ -21,6 +21,7 @@
       "homedesktop" = [
         ./system/games.nix
         ./system/work.nix
+        ./system/tor.nix
       ];
       "workdesktop" = [./system/work.nix];
       "worklaptop" = [./system/work.nix];
