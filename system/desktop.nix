@@ -2,12 +2,16 @@
   pkgs,
   inputs,
   ...
-}: {
+}: let
+  sddmTheme = pkgs.sddm-astronaut.override {embeddedTheme = "pixel_sakura";};
+in {
+  # The theme must be in systemPackages so SDDM finds it under
+  # /run/current-system/sw/share/sddm/themes; extraPackages only adds its Qt deps.
   services.displayManager.sddm = {
     enable = true;
     wayland.enable = true;
     theme = "sddm-astronaut-theme";
-    extraPackages = [(pkgs.sddm-astronaut.override {embeddedTheme = "pixel_sakura";})];
+    extraPackages = [sddmTheme];
   };
 
   services.avahi = {
@@ -84,6 +88,7 @@
   services.seatd.enable = true;
   security.pam.services.hyprlock = {};
   environment.systemPackages = [
+    sddmTheme
     inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default
     pkgs.xwayland-satellite
   ];
