@@ -22,6 +22,6 @@
       x = 2560;
       y = 0;
     };
-    wallpaper = ../../assets/wallpapers/gruvbox-lines.png;
+    wallpaper = ../../assets/wallpapers/gruvbox-pixels.png;
   };
 }
