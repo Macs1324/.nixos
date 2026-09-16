@@ -11,6 +11,16 @@
     if monitor.wallpaper != null
     then monitor.wallpaper
     else defaultWallpaper;
+  # Leftmost placed output (top edge breaks ties); the primary output stands in
+  # when no output has an explicit position.
+  placed = builtins.filter (monitor: monitor.position != null) (lib.attrValues enabled);
+  leftmost =
+    if placed == []
+    then primary
+    else
+      builtins.head (lib.sort (a: b:
+        a.position.x < b.position.x || (a.position.x == b.position.x && a.position.y < b.position.y))
+      placed);
   modeString = mode:
     if mode == null
     then "preferred"
@@ -19,6 +29,10 @@
       + lib.optionalString (mode.refresh != null) "@${toString mode.refresh}";
 in {
   inherit defaultWallpaper;
+  themeWallpaper =
+    if leftmost == null
+    then null
+    else wallpaperFor leftmost;
   names = builtins.attrNames enabled;
   wallpapers = lib.mapAttrs (_: wallpaperFor) enabled;
 

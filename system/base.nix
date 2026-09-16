@@ -1,6 +1,5 @@
 {
   pkgs,
-  lib,
   inputs,
   ...
 }: {
@@ -15,7 +14,6 @@
   # new initrd*, before it gets to prune the old ones -- so it cannot recover on
   # its own. Raising this above ~5 needs a bigger ESP.
   boot.loader.grub.configurationLimit = 5;
-  boot.loader.grub.theme = lib.mkForce pkgs.minimal-grub-theme;
   boot.loader.efi.canTouchEfiVariables = true;
 
   networking.networkmanager.enable = true;

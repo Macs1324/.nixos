@@ -5,6 +5,7 @@
     ../../system/work.nix
   ];
   networking.hostName = "workdesktop";
+  desktop.monitors = import ./monitors.nix;
 
   # Arc B60: retain the kernel and force-probe workaround from this machine.
   boot.kernelPackages = pkgs.linuxPackages_latest;

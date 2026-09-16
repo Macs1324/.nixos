@@ -6,6 +6,7 @@
     ../../system/games.nix
   ];
   networking.hostName = "homedesktop";
+  desktop.monitors = import ./monitors.nix;
 
   boot.initrd.kernelModules = ["amdgpu"];
   hardware.graphics = {

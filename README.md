@@ -2,8 +2,8 @@
 
 A single flake that configures three machines: NixOS for the system and a
 standalone Home Manager generation for the `macs` user. Both share one pinned
-`nixpkgs`, one theme (Stylix, Nord), and two Wayland sessions (Hyprland and
-Niri) with Noctalia as the shell for both.
+`nixpkgs`, one theme (Stylix, generated from the wallpaper), and two Wayland
+sessions (Hyprland and Niri) with Noctalia as the shell for both.
 
 | Host | Role | Notable hardware |
 | --- | --- | --- |
@@ -174,8 +174,15 @@ machine.
 ### Theme
 
 Stylix owns colors, fonts, cursor, and terminal opacity for both NixOS and Home
-Manager; per-program color settings are intentionally absent. Nixvim, Zen, and
-Hyprlock opt out of Stylix and keep their own looks.
+Manager; per-program color settings are intentionally absent. Both share
+`modules/theme.nix`, which generates a dark palette from the wallpaper of the
+leftmost enabled output in `hosts/<host>/monitors.nix` (the primary output if no
+output has a position). Wallpapers picked in Noctalia's GUI do not change the
+palette until they are declared and switched. Apps that Stylix can theme are
+configured through Home Manager rather than `environment.systemPackages`:
+Discord is Vesktop (`home/discord.nix`) and Spotify is patched by Spicetify
+(`home/spotify.nix`), imported per host from `hosts/<host>/home.nix`.
+Hyprlock keeps its blurred screenshot background; SDDM keeps its own theme.
 
 ## Secrets
 

@@ -8,7 +8,7 @@
       enable = true;
       settings = {
         options = {
-          theme = "nord";
+          theme = "auto";
           section_separators = {
             left = "";
             right = "";

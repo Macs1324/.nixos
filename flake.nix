@@ -30,6 +30,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    spicetify-nix = {
+      url = "github:Gerg-L/spicetify-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     nixvim = {
       url = "github:nix-community/nixvim";
       inputs.nixpkgs.follows = "nixpkgs";
@@ -93,6 +98,7 @@
           inputs.zen-browser.homeModules.default
           inputs.niri.homeModules.niri
           inputs.noctalia.homeModules.default
+          inputs.spicetify-nix.homeManagerModules.default
           (./hosts + "/${host}/home.nix")
         ];
       });

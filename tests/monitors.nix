@@ -18,6 +18,7 @@
   translate = monitors: import ../lib/monitors.nix {inherit lib;} (evaluate monitors).desktop.monitors;
   valid = monitors: lib.all (a: a.assertion) (evaluate monitors).assertions;
   wallpaper = ../assets/wallpapers/deep-sea.jpg;
+  other = ../assets/wallpapers/mecha-wings.png;
   fixture = {
     DP-1 = {
       primary = true;
@@ -94,6 +95,38 @@
     };
     testWallpaperFallback = {
       expr = output.wallpapers.HDMI-A-1;
+      expected = wallpaper;
+    };
+    testThemeWallpaperLeftmost = {
+      expr =
+        (translate {
+          DP-1 = {
+            primary = true;
+            inherit wallpaper;
+            position = {
+              x = 0;
+              y = 0;
+            };
+          };
+          HDMI-A-1 = {
+            wallpaper = other;
+            position = {
+              x = -1920;
+              y = 0;
+            };
+          };
+        }).themeWallpaper;
+      expected = other;
+    };
+    testThemeWallpaperPrimaryFallback = {
+      expr =
+        (translate {
+          DP-1 = {
+            primary = true;
+            inherit wallpaper;
+          };
+          HDMI-A-1.wallpaper = other;
+        }).themeWallpaper;
       expected = wallpaper;
     };
     testWorkspace = {

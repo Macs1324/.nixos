@@ -10,7 +10,7 @@
       x = 0;
       y = 0;
     };
-    wallpaper = ../../assets/wallpapers/deep-sea.jpg;
+    wallpaper = ../../assets/wallpapers/gruvbox-astronaut.png;
   };
   HDMI-A-2 = {
     mode = {
@@ -22,6 +22,6 @@
       x = 2560;
       y = 0;
     };
-    wallpaper = ../../assets/wallpapers/mecha-wings.png;
+    wallpaper = ../../assets/wallpapers/gruvbox-lines.png;
   };
 }

@@ -28,7 +28,6 @@
     gnupg
     pinentry-qt
     git-crypt
-    tmux
 
     libva
     libva-utils # Provides vainfo for checking VA-API
@@ -52,7 +51,6 @@
 
     # Editors
     vim
-    neovide
     code-cursor
 
     # CLI Tools
