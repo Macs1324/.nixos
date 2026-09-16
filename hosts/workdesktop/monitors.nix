@@ -10,7 +10,7 @@
       x = 0;
       y = 0;
     };
-    wallpaper = ../../assets/wallpapers/workdesktop-new.webp;
+    wallpaper = ../../assets/wallpapers/workdesktop-1.old.png;
     hyprlandWorkspaces = [ "1" ];
   };
   HDMI-A-2 = {
@@ -23,7 +23,7 @@
       x = 3440;
       y = 0;
     };
-    wallpaper = ../../assets/wallpapers/workdesktop-2.png;
+    wallpaper = ../../assets/wallpapers/worklaptop.png;
     hyprlandWorkspaces = [ "2" ];
   };
 }
