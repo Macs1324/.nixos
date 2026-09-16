@@ -7,18 +7,18 @@
     home-manager.url = "github:nix-community/home-manager/master";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
 
-    # Following nixpkgs here means Hyprland is built locally when its own pin
-    # differs from ours; drop the follows line to use hyprland.cachix.org again.
+    # The three below deliberately do NOT follow nixpkgs. Their binary caches only
+    # hold builds made against each flake's own nixpkgs pin, so a `follows` line
+    # changes the derivation hash and turns every cache hit into a local compile.
+    # The cost is carrying a few extra nixpkgs revisions in the store; the benefit
+    # is not building a compositor by hand. See system/base.nix for the caches.
     hyprland.url = "github:hyprwm/Hyprland";
-    hyprland.inputs.nixpkgs.follows = "nixpkgs";
 
     niri.url = "github:sodiboo/niri-flake";
-    niri.inputs.nixpkgs.follows = "nixpkgs";
 
-    noctalia = {
-      url = "github:noctalia-dev/noctalia";
-      inputs.nixpkgs.follows = "nixpkgs";
-    };
+    # The `cachix` branch always points at the newest commit CI has finished
+    # caching, unlike `main`, which can run ahead of it.
+    noctalia.url = "github:noctalia-dev/noctalia/cachix";
 
     zen-browser = {
       url = "github:0xc000022070/zen-browser-flake";

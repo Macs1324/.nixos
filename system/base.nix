@@ -10,6 +10,11 @@
   boot.loader.grub.device = "nodev";
   boot.loader.grub.efiSupport = true;
   boot.loader.grub.useOSProber = true;
+  # /boot is 511M and each generation costs ~75M of kernel + initrd. Without a
+  # cap it fills up, and the bootloader install then fails *while copying the
+  # new initrd*, before it gets to prune the old ones -- so it cannot recover on
+  # its own. Raising this above ~5 needs a bigger ESP.
+  boot.loader.grub.configurationLimit = 5;
   boot.loader.grub.theme = lib.mkForce pkgs.minimal-grub-theme;
   boot.loader.efi.canTouchEfiVariables = true;
 
@@ -76,8 +81,18 @@
       ];
       trusted-users = ["root" "@wheel"];
 
-      substituters = ["https://hyprland.cachix.org"];
-      trusted-public-keys = ["hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="];
+      # niri's cache is not listed here: its NixOS module adds niri.cachix.org
+      # itself via `niri-flake.cache.enable` (on by default).
+      # These only pay off while the matching flake input does not follow our
+      # nixpkgs -- see the note in flake.nix.
+      substituters = [
+        "https://hyprland.cachix.org"
+        "https://noctalia.cachix.org"
+      ];
+      trusted-public-keys = [
+        "hyprland.cachix.org-1:a7pgxzMz7+chwVL3/pzj6jIBMioiJM7ypFP8PwtkuGc="
+        "noctalia.cachix.org-1:pCOR47nnMEo5thcxNDtzWpOxNFQsBRglJzxWPp3dkU4="
+      ];
     };
 
     # Store housekeeping: prune old generations weekly and deduplicate the store.
