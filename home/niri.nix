@@ -4,7 +4,10 @@
   pkgs,
   inputs,
   ...
-}: {
+}: let
+  # Base16 palette from Stylix (Nord), so niri follows the rest of the theme.
+  colors = config.lib.stylix.colors.withHashtag;
+in {
   programs.niri = {
     enable = true;
     package = pkgs.niri;
@@ -87,27 +90,60 @@
         focus-ring = {
           enable = true;
           width = 2;
-          active.color = "#7fc8ff";
-          inactive.color = "#505050";
+          active.gradient = {
+            from = colors.base0C;
+            to = colors.base0D;
+            angle = 45;
+            in' = "oklch shorter hue";
+          };
+          inactive.color = colors.base02;
+          urgent.color = colors.base08;
         };
 
         border = {
           enable = false;
-          width = 4;
-          active.color = "#ffc87f";
-          inactive.color = "#505050";
-          urgent.color = "#9b0000";
+          width = 2;
+          active.color = colors.base0C;
+          inactive.color = colors.base02;
+          urgent.color = colors.base08;
         };
 
+        # Soft drop shadow for depth. Not drawn behind the window so translucent
+        # terminals stay clean instead of showing a dark smear through them.
         shadow = {
-          enable = false;
-          softness = 30.0;
-          spread = 5.0;
+          enable = true;
+          softness = 24.0;
+          spread = 3.0;
           offset = {
             x = 0.0;
-            y = 5.0;
+            y = 6.0;
           };
-          color = "#0007";
+          draw-behind-window = false;
+          color = "#00000055";
+          inactive-color = "#00000030";
+        };
+
+        # Slim tab strip along the top edge of tabbed columns, only when there
+        # is more than one tab.
+        tab-indicator = {
+          enable = true;
+          hide-when-single-tab = true;
+          place-within-column = true;
+          position = "top";
+          gap = 4.0;
+          width = 3.0;
+          length.total-proportion = 1.0;
+          gaps-between-tabs = 4.0;
+          corner-radius = 3.0;
+          active.color = colors.base0C;
+          inactive.color = colors.base03;
+          urgent.color = colors.base08;
+        };
+
+        # Translucent frost highlight for the drop target while dragging.
+        insert-hint = {
+          enable = true;
+          display.color = "${colors.base0C}66";
         };
 
         struts = {
@@ -140,10 +176,60 @@
       # Screenshot path
       screenshot-path = "~/Pictures/Screenshots/Screenshot from %Y-%m-%d %H-%M-%S.png";
 
-      # Animation settings
+      # Animations. Springs stay critically damped (no overshoot) but are
+      # stiffer than niri's defaults so scrolling, workspace switches and
+      # resizes settle faster. Open/close use short ease-out curves.
       animations = {
         enable = true;
         # slowdown = 3.0;
+
+        workspace-switch.kind.spring = {
+          damping-ratio = 1.0;
+          stiffness = 1400;
+          epsilon = 0.0001;
+        };
+        horizontal-view-movement.kind.spring = {
+          damping-ratio = 1.0;
+          stiffness = 1200;
+          epsilon = 0.0001;
+        };
+        window-movement.kind.spring = {
+          damping-ratio = 1.0;
+          stiffness = 1200;
+          epsilon = 0.0001;
+        };
+        window-resize.kind.spring = {
+          damping-ratio = 1.0;
+          stiffness = 1200;
+          epsilon = 0.0001;
+        };
+        overview-open-close.kind.spring = {
+          damping-ratio = 1.0;
+          stiffness = 1100;
+          epsilon = 0.0001;
+        };
+        window-open.kind.easing = {
+          duration-ms = 120;
+          curve = "ease-out-expo";
+        };
+        window-close.kind.easing = {
+          duration-ms = 100;
+          curve = "ease-out-quad";
+        };
+        config-notification-open-close.kind.spring = {
+          damping-ratio = 0.7;
+          stiffness = 1000;
+          epsilon = 0.001;
+        };
+      };
+
+      # Use the same cursor theme as the rest of the session for niri's own
+      # pointer, and hide it while typing or after a few seconds idle.
+      cursor = {
+        theme = config.home.pointerCursor.name;
+        size = config.home.pointerCursor.size;
+        hide-when-typing = true;
+        hide-after-inactive-ms = 3000;
       };
 
       # Window rules
@@ -178,7 +264,7 @@
         #   block-out-from = "screen-capture";
         # }
 
-        # Example: enable rounded corners for all windows (commented out)
+        # Rounded corners for all windows
         {
           matches = [{}];
           geometry-corner-radius = {
