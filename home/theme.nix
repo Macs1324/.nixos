@@ -24,5 +24,10 @@
     package = pkgs.bibata-cursors;
     size = 24;
     gtk.enable = true;
+    # Generates HYPRCURSOR_THEME/HYPRCURSOR_SIZE instead of hand-written env lines.
+    hyprcursor = {
+      enable = true;
+      size = 24;
+    };
   };
 }

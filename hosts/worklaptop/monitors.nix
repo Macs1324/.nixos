@@ -10,6 +10,6 @@
       x = 0;
       y = 0;
     };
-    wallpaper = ../../assets/wallpapers/worklaptop.jpg;
+    wallpaper = ../../assets/wallpapers/deep-sea.jpg;
   };
 }

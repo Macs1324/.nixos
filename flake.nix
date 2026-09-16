@@ -7,8 +7,10 @@
     home-manager.url = "github:nix-community/home-manager/master";
     home-manager.inputs.nixpkgs.follows = "nixpkgs";
 
+    # Following nixpkgs here means Hyprland is built locally when its own pin
+    # differs from ours; drop the follows line to use hyprland.cachix.org again.
     hyprland.url = "github:hyprwm/Hyprland";
-    hyprland-qtutils.url = "github:hyprwm/hyprland-qtutils";
+    hyprland.inputs.nixpkgs.follows = "nixpkgs";
 
     niri.url = "github:sodiboo/niri-flake";
     niri.inputs.nixpkgs.follows = "nixpkgs";
@@ -18,7 +20,10 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    zen-browser.url = "github:0xc000022070/zen-browser-flake";
+    zen-browser = {
+      url = "github:0xc000022070/zen-browser-flake";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
 
     stylix = {
       url = "github:danth/stylix";
@@ -27,7 +32,6 @@
 
     nixvim = {
       url = "github:nix-community/nixvim";
-      # If using a stable channel you can use `url = "github:nix-community/nixvim/nixos-<version>"`
       inputs.nixpkgs.follows = "nixpkgs";
     };
   };
@@ -40,12 +44,33 @@
     system = "x86_64-linux";
     lib = nixpkgs.lib;
     hosts = ["workdesktop" "worklaptop" "homedesktop"];
+    # A host only becomes buildable once its machine has imported its hardware
+    # file with `just hardware <host>`; see scripts/import-hardware.sh.
+    hardwareFile = host: ./hosts + "/${host}/hardware-configuration.nix";
+    readyHosts = builtins.filter (host: builtins.pathExists (hardwareFile host)) hosts;
     pkgs = import nixpkgs {
       inherit system;
       config = import ./lib/nixpkgs-config.nix;
     };
+    tests = {
+      monitor-model = import ./tests/monitors.nix {inherit lib pkgs;};
+      helper-tests =
+        pkgs.runCommand "workstation-helper-tests" {
+          nativeBuildInputs = [
+            (pkgs.python3.withPackages (ps: [ps.tomlkit]))
+            pkgs.bash
+            pkgs.just
+          ];
+        } ''
+          cp -r ${./scripts} scripts
+          cp -r ${./tests} tests
+          cp ${./Justfile} Justfile
+          python -B -m unittest discover -s tests
+          touch $out
+        '';
+    };
   in {
-    nixosConfigurations = lib.genAttrs hosts (host:
+    nixosConfigurations = lib.genAttrs readyHosts (host:
       lib.nixosSystem {
         inherit system;
         specialArgs = {inherit inputs;};
@@ -72,27 +97,14 @@
         ];
       });
 
+    # Exposed as packages so `nix build .#monitor-model` resolves the system itself.
+    packages.${system} = tests;
+
     # Flake checking normally ignores custom homeConfigurations outputs.
     checks.${system} =
       lib.genAttrs (map (host: "home-${host}") hosts) (name:
         inputs.self.homeConfigurations."macs@${lib.removePrefix "home-" name}".activationPackage)
-      // {
-        monitor-model = import ./tests/monitors.nix {inherit lib pkgs;};
-        helper-tests =
-          pkgs.runCommand "workstation-helper-tests" {
-            nativeBuildInputs = [
-              (pkgs.python3.withPackages (ps: [ps.tomlkit]))
-              pkgs.bash
-              pkgs.just
-            ];
-          } ''
-            cp -r ${./scripts} scripts
-            cp -r ${./tests} tests
-            cp ${./Justfile} Justfile
-            python -B -m unittest discover -s tests
-            touch $out
-          '';
-      };
+      // tests;
 
     formatter.${system} = pkgs.alejandra;
   };

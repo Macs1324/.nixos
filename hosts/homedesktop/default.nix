@@ -1,5 +1,6 @@
 {pkgs, ...}: {
   imports = [
+    ./hardware-configuration.nix
     ../../system
     ../../system/work.nix
     ../../system/games.nix

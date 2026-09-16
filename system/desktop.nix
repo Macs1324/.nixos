@@ -37,6 +37,7 @@
     jack.enable = true;
   };
 
+  services.flatpak.enable = true;
   services.upower.enable = true;
   services.power-profiles-daemon.enable = true;
   services.gnome.evolution-data-server.enable = true;

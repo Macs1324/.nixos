@@ -1,6 +1,6 @@
 {
   config,
-  lib,
+  options,
   pkgs,
   inputs,
   ...
@@ -8,75 +8,26 @@
   programs.niri = {
     enable = true;
     package = pkgs.niri;
-    # niri-flake's typed settings currently lag behind the installed Niri
-    # package for background-effect. Render the typed settings normally, then
-    # append the one new rule as raw KDL.
+    # niri-flake does not type `background-effect` yet. Take the KDL document
+    # it renders from `settings` (the option's default) and append the extra
+    # rules as KDL nodes, so nothing is re-evaluated or stripped.
     config = let
-      # A fully evaluated settings value contains compatibility-only defaults.
-      # Do not feed those back into the nested module evaluation, because doing
-      # so makes removed options look explicitly configured.
-      settings =
-        config.programs.niri.settings
-        // {
-          animations = builtins.removeAttrs config.programs.niri.settings.animations ["shaders"];
-          cursor = builtins.removeAttrs config.programs.niri.settings.cursor ["hide-on-key-press"];
-        };
-      renderedSettings =
-        (lib.evalModules {
-          modules = [
-            inputs.niri.lib.internal.settings-module
-            {
-              programs.niri.settings = settings;
-            }
-          ];
-        }).config.programs.niri.finalConfig;
+      kdl = inputs.niri.lib.kdl;
+      backgroundEffect = xray: kdl.plain "background-effect" [(kdl.leaf "blur" true) (kdl.leaf "xray" xray)];
+      windowRule = appIds: kdl.plain "window-rule" (map (id: kdl.leaf "match" {app-id = id;}) appIds ++ [(backgroundEffect false)]);
+      layerRule = namespace: children: kdl.plain "layer-rule" ([(kdl.leaf "match" {inherit namespace;})] ++ children);
     in
-      renderedSettings
-      + ''
-
-        window-rule {
-          match app-id="^neovide$"
-
-          background-effect {
-            blur true
-            xray false
-          }
-        }
-
-        window-rule {
-          match app-id="^kitty$"
-          match app-id="^Alacritty$"
-          match app-id="^com.mitchellh.ghostty$"
-          match app-id="^org.wezfurlong.wezterm$"
-          match app-id="^clipse$"
-
-          background-effect {
-            blur true
-            xray false
-          }
-        }
-
-        // Noctalia publishes precise blur regions through
-        // ext-background-effect. Use regular blur for its shell surfaces
-        // instead of Niri's default wallpaper-only xray blur.
-        layer-rule {
-          match namespace="^noctalia-(bar-[^\"]+|notification|dock|panel|attached-panel|osd)$"
-
-          background-effect {
-            xray false
-          }
-        }
-
-        // The window switcher does not publish its own blur region.
-        layer-rule {
-          match namespace="^noctalia-window-switcher$"
-
-          background-effect {
-            blur true
-            xray false
-          }
-        }
-      '';
+      options.programs.niri.config.default
+      ++ [
+        (windowRule ["^neovide$"])
+        (windowRule ["^kitty$" "^Alacritty$" "^com.mitchellh.ghostty$" "^org.wezfurlong.wezterm$" "^clipse$"])
+        # Noctalia publishes precise blur regions through ext-background-effect.
+        # Use regular blur for its shell surfaces instead of Niri's default
+        # wallpaper-only xray blur.
+        (layerRule "^noctalia-(bar-[^\"]+|notification|dock|panel|attached-panel|osd)$" [(kdl.plain "background-effect" [(kdl.leaf "xray" false)])])
+        # The window switcher does not publish its own blur region.
+        (layerRule "^noctalia-window-switcher$" [(backgroundEffect false)])
+      ];
     settings = {
       # Input configuration
       input = {
@@ -255,19 +206,19 @@
 
         # Program launchers
         "Mod+Q" = {
-          action.spawn = "kitty";
-          hotkey-overlay.title = "Open a Terminal: kitty";
+          action.spawn-sh = config.desktop.apps.terminal;
+          hotkey-overlay.title = "Open a Terminal: ${config.desktop.apps.terminal}";
         };
         "Mod+E" = {
-          action.spawn = "thunar";
-          hotkey-overlay.title = "Open a File manager: thunar";
+          action.spawn-sh = config.desktop.apps.fileManager;
+          hotkey-overlay.title = "Open a File manager: ${config.desktop.apps.fileManager}";
         };
         "Mod+O" = {
-          action.spawn-sh = "noctalia msg panel-toggle launcher";
+          action.spawn-sh = config.desktop.apps.launcher;
           hotkey-overlay.title = "Application menu";
         };
         "Ctrl+Alt+L" = {
-          action.spawn-sh = "noctalia msg session lock";
+          action.spawn-sh = config.desktop.apps.lock;
           hotkey-overlay.title = "Lock the Screen";
         };
 

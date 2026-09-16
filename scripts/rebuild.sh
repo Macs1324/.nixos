@@ -16,18 +16,29 @@ esac
 system=".#nixosConfigurations.$host.config.system.build.toplevel"
 home=".#homeConfigurations.macs@$host.activationPackage"
 
+require_hardware() {
+  if [[ ! -f "hosts/$host/hardware-configuration.nix" ]]; then
+    echo "hosts/$host/hardware-configuration.nix is missing; run this on $host first:" >&2
+    echo "  just hardware $host" >&2
+    exit 3
+  fi
+}
+
 case "$action" in
   build)
-    nix build --impure --no-link "$system" "$home"
+    require_hardware
+    nix build --no-link "$system" "$home"
     ;;
   switch)
+    require_hardware
     # Validate and build both halves before activating either one.
-    nix build --impure --no-link "$system" "$home"
-    sudo nixos-rebuild switch --impure --flake ".#$host"
-    home-manager switch --flake ".#macs@$host"
+    nix build --no-link "$system" "$home"
+    sudo nixos-rebuild switch --flake ".#$host"
+    # Back up unmanaged files that Home Manager takes over instead of aborting.
+    home-manager switch -b hm-backup --flake ".#macs@$host"
     ;;
   home)
-    home-manager switch --flake ".#macs@$host"
+    home-manager switch -b hm-backup --flake ".#macs@$host"
     ;;
   *)
     echo "Unknown action: $action (expected build, switch, or home)." >&2

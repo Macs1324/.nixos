@@ -15,7 +15,6 @@
     obs-studio
     vlc
     proton-vpn
-    flatpak
     plantuml
     asciidoc-full
     mermaid-cli
@@ -28,7 +27,6 @@
     gpu-screen-recorder
     gnupg
     pinentry-qt
-    (sddm-astronaut.override {embeddedTheme = "pixel_sakura";})
     git-crypt
     tmux
 

@@ -10,7 +10,7 @@
       x = 0;
       y = 0;
     };
-    wallpaper = ../../assets/wallpapers/homedesktop-1.jpg;
+    wallpaper = ../../assets/wallpapers/deep-sea.jpg;
   };
   HDMI-A-2 = {
     mode = {
@@ -22,6 +22,6 @@
       x = 2560;
       y = 0;
     };
-    wallpaper = ../../assets/wallpapers/homedesktop-2.png;
+    wallpaper = ../../assets/wallpapers/mecha-wings.png;
   };
 }

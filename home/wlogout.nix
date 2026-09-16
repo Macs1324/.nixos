@@ -8,7 +8,7 @@
     layout = [
       {
         label = "lock";
-        action = "sleep .5 && hyprlock";
+        action = "sleep .5 && ${config.desktop.apps.lock}";
         text = "Lock";
         keybind = "l";
       }

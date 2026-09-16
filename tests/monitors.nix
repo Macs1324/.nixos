@@ -17,7 +17,7 @@
     }).config;
   translate = monitors: import ../lib/monitors.nix {inherit lib;} (evaluate monitors).desktop.monitors;
   valid = monitors: lib.all (a: a.assertion) (evaluate monitors).assertions;
-  wallpaper = ../assets/wallpapers/worklaptop.jpg;
+  wallpaper = ../assets/wallpapers/deep-sea.jpg;
   fixture = {
     DP-1 = {
       primary = true;

@@ -35,13 +35,5 @@ in {
       enable = true;
       settings.wallpaper = displays.noctaliaWallpaper;
     };
-
-    dconf.settings = lib.mkIf (displays.defaultWallpaper != null) {
-      "org/gnome/desktop/background" = {
-        picture-uri = "file://${displays.defaultWallpaper}";
-        picture-uri-dark = "file://${displays.defaultWallpaper}";
-      };
-      "org/gnome/desktop/screensaver".picture-uri = "file://${displays.defaultWallpaper}";
-    };
   };
 }

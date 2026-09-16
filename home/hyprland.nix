@@ -1,9 +1,11 @@
 {
+  config,
+  lib,
   pkgs,
   inputs,
   ...
 }: {
-  imports = [./wofi.nix ./hyprlock.nix];
+  imports = [./hyprlock.nix];
   wayland.windowManager.hyprland = {
     enable = true;
     configType = "lua";
@@ -32,7 +34,10 @@
       };
     };
     # Native Lua keeps dispatcher arguments and ordering explicit. Host-specific
-    # monitors and workspace rules come from the shared monitor adapter.
-    extraConfig = builtins.readFile ./hyprland.lua;
+    # monitors and workspace rules come from the shared monitor adapter, and the
+    # shared application commands are passed in as the `apps` table.
+    extraConfig =
+      "local apps = ${lib.generators.toLua {} config.desktop.apps}\n"
+      + builtins.readFile ./hyprland.lua;
   };
 }

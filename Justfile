@@ -15,16 +15,21 @@ switch host="":
 home host="":
     bash scripts/rebuild.sh home "$1"
 
+# Generate and stage this machine's hardware file under hosts/<host>/.
+hardware host="":
+    bash scripts/import-hardware.sh "$1"
+
 # Update the lock file for review; activation and commits are separate actions.
 update:
     nix flake update
 
+# Nix resolves the current system for the test packages; no hardcoded platform.
 check:
     alejandra --check .
-    shellcheck scripts/rebuild.sh
-    bash -n scripts/rebuild.sh
-    nix build --no-link .#checks.x86_64-linux.monitor-model .#checks.x86_64-linux.helper-tests
-    nix flake check --impure --no-build
+    shellcheck scripts/rebuild.sh scripts/import-hardware.sh
+    bash -n scripts/rebuild.sh scripts/import-hardware.sh
+    nix build --no-link .#monitor-model .#helper-tests
+    nix flake check --no-build
 
 clean:
     sudo nix-collect-garbage -d
