@@ -1,0 +1,8 @@
+# Legacy selector; no longer read by the flake.
+/pc
+/result
+/result-*
+
+# Hardware detection belongs in /etc/nixos, never in Git.
+hardware-configuration.nix
+.env

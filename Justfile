@@ -1,22 +1,31 @@
-default:
-	just switch
-	lazygit
+set positional-arguments
 
+default: switch
+
+fmt:
+    alejandra .
+
+# Selection: explicit host, then NIXOS_HOST, then the current hostname.
+build host="":
+    bash scripts/rebuild.sh build "$1"
+
+switch host="":
+    bash scripts/rebuild.sh switch "$1"
+
+home host="":
+    bash scripts/rebuild.sh home "$1"
+
+# Update the lock file for review; activation and commits are separate actions.
 update:
-	sudo nix flake update
-	just switch
-	git add flake.lock
-	git commit -m "update"
-	git push
+    nix flake update
 
-switch:
-	alejandra .
-	cp /etc/nixos/hardware-configuration.nix .
-	git add hardware-configuration.nix
-	git add pc
-
-	sudo nixos-rebuild switch --install-bootloader --flake .#nixos && home-manager switch --flake . && git rm hardware-configuration.nix --cached && git rm pc --cached && rm hardware-configuration.nix
+check:
+    alejandra --check .
+    shellcheck scripts/rebuild.sh
+    bash -n scripts/rebuild.sh
+    nix build --no-link .#checks.x86_64-linux.monitor-model .#checks.x86_64-linux.helper-tests
+    nix flake check --impure --no-build
 
 clean:
-	sudo nix-collect-garbage -d
-	nix-collect-garbage -d
+    sudo nix-collect-garbage -d
+    nix-collect-garbage -d

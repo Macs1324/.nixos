@@ -2,8 +2,7 @@
   config,
   lib,
   pkgs,
-  pc,
-  niri,
+  inputs,
   ...
 }: {
   programs.niri = {
@@ -25,7 +24,7 @@
       renderedSettings =
         (lib.evalModules {
           modules = [
-            niri.lib.internal.settings-module
+            inputs.niri.lib.internal.settings-module
             {
               programs.niri.settings = settings;
             }
@@ -113,103 +112,6 @@
         # Uncomment to enable mouse warping to focused window
         warp-mouse-to-focus.enable = true;
       };
-
-      # Output configuration
-      # Uncomment and adjust for your specific displays
-      outputs =
-        {
-          "workdesktop" = {
-            "DP-1" = {
-              mode = {
-                width = 3440;
-                height = 1440;
-                refresh = 165.00;
-              };
-              scale = 1.0;
-              transform = {
-                rotation = 0;
-                flipped = false;
-              };
-              position = {
-                x = 0;
-                y = 0;
-              };
-            };
-
-            "HDMI-A-2" = {
-              mode = {
-                width = 2560;
-                height = 1440;
-                refresh = 144.00;
-              };
-              scale = 1.0;
-              transform = {
-                rotation = 0;
-                flipped = false;
-              };
-              position = {
-                x = 3440;
-                y = 0;
-              };
-            };
-          };
-          "homedesktop" = {
-            "DP-2" = {
-              mode = {
-                width = 2560;
-                height = 1440;
-                refresh = 170.017;
-              };
-              scale = 1.0;
-              transform = {
-                rotation = 0;
-                flipped = false;
-              };
-              position = {
-                x = 0;
-                y = 0;
-              };
-            };
-
-            "HDMI-A-2" = {
-              mode = {
-                width = 1920;
-                height = 1080;
-                refresh = 60.00;
-              };
-              scale = 1.0;
-              transform = {
-                rotation = 0;
-                flipped = false;
-              };
-              position = {
-                x = 2560;
-                y = 0;
-              };
-            };
-          };
-          "worklaptop" = {
-            "eDP=1" = {
-              mode = {
-                width = 2880;
-                height = 1800;
-                refresh = 120.001;
-              };
-              scale = 1.0;
-              transform = {
-                rotation = 0;
-                flipped = false;
-              };
-              position = {
-                x = 0;
-                y = 0;
-              };
-            };
-          };
-        }
-        .${
-          pc
-        };
 
       # Layout settings
       layout = {

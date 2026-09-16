@@ -32,74 +32,68 @@
     };
   };
 
-  outputs = {
-    self,
-    hyprland,
-    hyprland-qtutils,
+  outputs = inputs @ {
     nixpkgs,
     home-manager,
-    zen-browser,
-    niri,
-    noctalia,
-    stylix,
-    nixvim,
     ...
   }: let
     system = "x86_64-linux";
     lib = nixpkgs.lib;
-    pkgs = nixpkgs.legacyPackages.${system};
-
-    pcs = {
-      worklaptop = "worklaptop";
-      workdesktop = "workdesktop";
-      homedesktop = "homedesktop";
+    hosts = ["workdesktop" "worklaptop" "homedesktop"];
+    pkgs = import nixpkgs {
+      inherit system;
+      config = import ./lib/nixpkgs-config.nix;
     };
-    pc = lib.strings.removeSuffix "\n" "${builtins.readFile ./pc}";
-
-    theme = "${pkgs.base16-schemes}/share/themes/nord.yaml";
   in {
-    nixosConfigurations = {
-      nixos = lib.nixosSystem {
+    nixosConfigurations = lib.genAttrs hosts (host:
+      lib.nixosSystem {
         inherit system;
+        specialArgs = {inherit inputs;};
         modules = [
-          stylix.nixosModules.stylix
-          niri.nixosModules.niri
-          ./configuration.nix
-          ./noctalia.nix
+          inputs.stylix.nixosModules.stylix
+          inputs.niri.nixosModules.niri
+          (./hosts + "/${host}")
         ];
-        specialArgs = {
-          inherit
-            pc
-            zen-browser
-            hyprland
-            theme
-            noctalia
-            ;
-        };
-      };
-    };
-    homeConfigurations = {
-      macs = home-manager.lib.homeManagerConfiguration {
+      });
+
+    homeConfigurations = lib.genAttrs (map (host: "macs@${host}") hosts) (name: let
+      host = lib.removePrefix "macs@" name;
+    in
+      home-manager.lib.homeManagerConfiguration {
         inherit pkgs;
+        extraSpecialArgs = {inherit inputs;};
         modules = [
-          stylix.homeModules.stylix
-          nixvim.homeModules.nixvim
-          zen-browser.homeModules.default
-          niri.homeModules.niri
-          ./home.nix
+          inputs.stylix.homeModules.stylix
+          inputs.nixvim.homeModules.nixvim
+          inputs.zen-browser.homeModules.default
+          inputs.niri.homeModules.niri
+          inputs.noctalia.homeModules.default
+          (./hosts + "/${host}/home.nix")
         ];
-        extraSpecialArgs = {
-          inherit
-            pc
-            hyprland
-            hyprland-qtutils
-            stylix
-            theme
-            zen-browser
-            niri
-            ;
-        };
+      });
+
+    # Flake checking normally ignores custom homeConfigurations outputs.
+    checks.${system} =
+      lib.genAttrs (map (host: "home-${host}") hosts) (name:
+        inputs.self.homeConfigurations."macs@${lib.removePrefix "home-" name}".activationPackage)
+      // {
+        monitor-model = import ./tests/monitors.nix {inherit lib pkgs;};
+        helper-tests =
+          pkgs.runCommand "workstation-helper-tests" {
+            nativeBuildInputs = [
+              (pkgs.python3.withPackages (ps: [ps.tomlkit]))
+              pkgs.bash
+              pkgs.just
+            ];
+          } ''
+            cp -r ${./scripts} scripts
+            cp -r ${./tests} tests
+            cp ${./Justfile} Justfile
+            python -B -m unittest discover -s tests
+            touch $out
+          '';
       };
-    };
+
+    formatter.${system} = pkgs.alejandra;
   };
 }

@@ -3,7 +3,6 @@
   hyprland-plugins,
   config,
   pkgs,
-  pc,
   ...
 }: {
   programs.waybar = {

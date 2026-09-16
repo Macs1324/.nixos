@@ -2,7 +2,6 @@
   config,
   pkgs,
   lib,
-  pc,
   ...
 }: {
   # GNOME configuration aligned with Hyprland aesthetics
@@ -115,44 +114,11 @@
       center-new-windows = true;
     };
 
-    # Desktop background and screensaver - matching Hyprland wallpapers
-    "org/gnome/desktop/background" =
-      if pc == "workdesktop"
-      then {
-        picture-uri = "file:///home/macs/.nixos/assets/wallpapers/workdesktop-1.png";
-        picture-uri-dark = "file:///home/macs/.nixos/assets/wallpapers/workdesktop-1.png";
-        picture-options = "zoom";
-      }
-      else if pc == "homedesktop"
-      then {
-        picture-uri = "file:///home/macs/.nixos/assets/wallpapers/homedesktop-1.jpg";
-        picture-uri-dark = "file:///home/macs/.nixos/assets/wallpapers/homedesktop-1.jpg";
-        picture-options = "zoom";
-      }
-      else {
-        picture-uri = "file:///home/macs/.nixos/assets/wallpapers/${pc}.jpg";
-        picture-uri-dark = "file:///home/macs/.nixos/assets/wallpapers/${pc}.jpg";
-        picture-options = "zoom";
-      };
-
-    "org/gnome/desktop/screensaver" =
-      if pc == "workdesktop"
-      then {
-        picture-uri = "file:///home/macs/.nixos/assets/wallpapers/workdesktop-1.png";
-        lock-enabled = true;
-        lock-delay = lib.hm.gvariant.mkUint32 300;
-      }
-      else if pc == "homedesktop"
-      then {
-        picture-uri = "file:///home/macs/.nixos/assets/wallpapers/homedesktop-1.jpg";
-        lock-enabled = true;
-        lock-delay = lib.hm.gvariant.mkUint32 300;
-      }
-      else {
-        picture-uri = "file:///home/macs/.nixos/assets/wallpapers/${pc}.jpg";
-        lock-enabled = true;
-        lock-delay = lib.hm.gvariant.mkUint32 300;
-      };
+    "org/gnome/desktop/background".picture-options = "zoom";
+    "org/gnome/desktop/screensaver" = {
+      lock-enabled = true;
+      lock-delay = lib.hm.gvariant.mkUint32 300;
+    };
 
     # Power settings
     "org/gnome/settings-daemon/plugins/power" = {

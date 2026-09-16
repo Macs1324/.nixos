@@ -1,7 +1,6 @@
 {
   config,
   pkgs,
-  pc,
   ...
 }: {
   programs.codex = {
