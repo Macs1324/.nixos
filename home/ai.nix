@@ -3,11 +3,15 @@
   pkgs,
   ...
 }: {
+  imports = [./claude];
+
   programs.codex = {
     enable = true;
   };
   programs.opencode = {
     enable = true;
+    # Picks up the MCP servers declared in home/claude/default.nix.
+    enableMcpIntegration = true;
 
     agents = {
       orchestrator = ''

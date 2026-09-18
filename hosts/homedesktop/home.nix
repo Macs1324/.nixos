@@ -5,4 +5,5 @@
     ../../home/spotify.nix
   ];
   desktop.monitors = import ./monitors.nix;
+  ai.claude.profile = "personal";
 }
