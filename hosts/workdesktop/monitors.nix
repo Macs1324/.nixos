@@ -10,7 +10,7 @@
       x = 0;
       y = 0;
     };
-    wallpaper = ../../assets/wallpapers/gruvbox-astronaut.png;
+    wallpaper = ../../assets/wallpapers/night-mountains.png;
     hyprlandWorkspaces = [ "1" ];
   };
   HDMI-A-2 = {
@@ -23,7 +23,7 @@
       x = 3440;
       y = 0;
     };
-    wallpaper = ../../assets/wallpapers/gruvbox-pixels.png;
+    wallpaper = ../../assets/wallpapers/forest-sunset.png;
     hyprlandWorkspaces = [ "2" ];
   };
 }
