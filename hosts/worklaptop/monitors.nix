@@ -12,6 +12,6 @@
       x = 0;
       y = 0;
     };
-    wallpaper = ../../assets/wallpapers/deep-sea.jpg;
+    wallpaper = ../../assets/wallpapers/gruvbox-coffee.png;
   };
 }
