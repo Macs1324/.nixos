@@ -4,7 +4,8 @@
   lib,
   pkgs,
   ...
-}: let
+}:
+let
   cfg = config.ai.claude;
   work = cfg.profile == "work";
 
@@ -13,7 +14,10 @@
   # this never fails a tool call over a missing binary.
   formatHook = pkgs.writeShellApplication {
     name = "claude-format-hook";
-    runtimeInputs = [pkgs.jq pkgs.alejandra];
+    runtimeInputs = [
+      pkgs.jq
+      pkgs.alejandra
+    ];
     text = ''
       f=$(jq -r '.tool_input.file_path // empty')
       [ -n "$f" ] && [ -f "$f" ] || exit 0
@@ -33,7 +37,10 @@
 
   statusLine = pkgs.writeShellApplication {
     name = "claude-statusline";
-    runtimeInputs = [pkgs.jq pkgs.git];
+    runtimeInputs = [
+      pkgs.jq
+      pkgs.git
+    ];
     text = ''
       input=$(cat)
       model=$(jq -r '.model.display_name' <<<"$input")
@@ -106,35 +113,39 @@
     "WebSearch"
   ];
 
-  denied =
-    [
-      "Read(**/.env)"
-      "Read(**/.env.*)"
-      "Read(**/secrets/**)"
-      "Read(~/.ssh/**)"
-      "Read(~/.gnupg/**)"
-      "Bash(git push --force:*)"
-      "Bash(git push -f:*)"
-      "Bash(git push --force-with-lease:*)"
-      "Bash(git reset --hard:*)"
-      "Bash(rm -rf /:*)"
-      "Bash(rm -rf ~:*)"
-    ]
-    ++ lib.optionals work [
-      "Read(~/.aws/**)"
-      "Read(~/.kube/**)"
-      "Read(~/.config/gcloud/**)"
-      "Read(~/.docker/config.json)"
-      "Bash(git push:*)"
-    ];
+  denied = [
+    "Read(**/.env)"
+    "Read(**/.env.*)"
+    "Read(**/secrets/**)"
+    "Read(~/.ssh/**)"
+    "Read(~/.gnupg/**)"
+    "Bash(git push --force:*)"
+    "Bash(git push -f:*)"
+    "Bash(git push --force-with-lease:*)"
+    "Bash(git reset --hard:*)"
+    "Bash(rm -rf /:*)"
+    "Bash(rm -rf ~:*)"
+  ]
+  ++ lib.optionals work [
+    "Read(~/.aws/**)"
+    "Read(~/.kube/**)"
+    "Read(~/.config/gcloud/**)"
+    "Read(~/.docker/config.json)"
+    "Bash(git push:*)"
+  ];
 
-  mdDir = dir:
-    lib.mapAttrs' (
-      file: _: lib.nameValuePair (lib.removeSuffix ".md" file) (dir + "/${file}")
-    ) (lib.filterAttrs (f: t: t == "regular" && lib.hasSuffix ".md" f) (builtins.readDir dir));
-in {
+  mdDir =
+    dir:
+    lib.mapAttrs' (file: _: lib.nameValuePair (lib.removeSuffix ".md" file) (dir + "/${file}")) (
+      lib.filterAttrs (f: t: t == "regular" && lib.hasSuffix ".md" f) (builtins.readDir dir)
+    );
+in
+{
   options.ai.claude.profile = lib.mkOption {
-    type = lib.types.enum ["work" "personal"];
+    type = lib.types.enum [
+      "work"
+      "personal"
+    ];
     default = "work";
     description = ''
       work: every write is approved, pushes are always manual, bypass mode is
@@ -165,17 +176,14 @@ in {
 
       settings = {
         env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1";
-        model = "claude-fable-5-1[1m]";
+        model = "claude-opus-5-5[1m]";
         alwaysThinkingEnabled = true;
         tui = "fullscreen";
         agentPushNotifEnabled = true;
         enabledPlugins."rust-analyzer-lsp@claude-plugins-official" = true;
 
         permissions = {
-          defaultMode =
-            if work
-            then "default"
-            else "acceptEdits";
+          defaultMode = if work then "default" else "acceptEdits";
           allow = readOnlyCommands ++ lib.optionals (!work) vibeCommands;
           deny = denied;
           disableBypassPermissionsMode = lib.mkIf work "disable";
@@ -199,10 +207,7 @@ in {
           padding = 0;
         };
 
-        cleanupPeriodDays =
-          if work
-          then 30
-          else 90;
+        cleanupPeriodDays = if work then 30 else 90;
       };
 
       context = ./CLAUDE.md;
@@ -212,13 +217,14 @@ in {
     };
 
     programs.zsh.shellAliases =
-      if work
-      then {
-        # Bypass mode is disabled on work hosts; this is as loose as it gets.
-        vibe = "claude --permission-mode acceptEdits";
-      }
-      else {
-        vibe = "claude --dangerously-skip-permissions";
-      };
+      if work then
+        {
+          # Bypass mode is disabled on work hosts; this is as loose as it gets.
+          vibe = "claude --permission-mode acceptEdits";
+        }
+      else
+        {
+          vibe = "claude --dangerously-skip-permissions";
+        };
   };
 }
