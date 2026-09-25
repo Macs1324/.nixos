@@ -34,6 +34,27 @@ in {
     programs.noctalia = {
       enable = true;
       settings.wallpaper = displays.noctaliaWallpaper;
+      # Lock screen widgets sit at output-local coordinates, so each output gets
+      # its own label; the login box stays at its default spot near the bottom.
+      settings.lockscreen_widgets = {
+        enabled = true;
+        widget = lib.mapAttrs' (name: center:
+          lib.nameValuePair "brb-${name}" (center
+            // {
+              type = "label";
+              output = name;
+              # A set box scales the text to fit it.
+              box_width = 420.0;
+              box_height = 140.0;
+              rotation = 0.0;
+              settings = {
+                title = "brb :)";
+                background = false;
+                font_family = config.stylix.fonts.monospace.name;
+              };
+            }))
+        displays.logicalCenters;
+      };
     };
   };
 }

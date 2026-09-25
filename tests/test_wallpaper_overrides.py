@@ -56,6 +56,18 @@ path = "/unmanaged/right.jpg"
         self.assertEqual(self.path.stat().st_mode & 0o777, 0o600)
         self.assertEqual(Path(str(self.path) + ".before-nix-monitors").read_text(), self.original)
 
+    def test_lockscreen_widget_order_removed(self):
+        self.path.write_text('''[lockscreen_widgets]
+enabled = true
+widget_order = [ "lockscreen-login-box@DP-1" ]
+[lockscreen_widgets.widget."lockscreen-login-box@DP-1"]
+cx = 1720.0
+''')
+        self.assertTrue(reset.reset_overrides(self.path, ["DP-1"]))
+        document = tomlkit.parse(self.path.read_text())
+        self.assertNotIn("widget_order", document["lockscreen_widgets"])
+        self.assertEqual(document["lockscreen_widgets"]["widget"]["lockscreen-login-box@DP-1"]["cx"], 1720.0)
+
     def test_idempotent(self):
         reset.reset_overrides(self.path, ["DP-1"])
         original_stat = self.path.stat()

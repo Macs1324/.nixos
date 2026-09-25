@@ -14,7 +14,7 @@ in {
     terminal = app "kitty" "Shell command that opens the terminal.";
     launcher = app "noctalia msg panel-toggle launcher" "Shell command that opens the application launcher.";
     fileManager = app "thunar" "Shell command that opens the file manager.";
-    lock = app "hyprlock" "Shell command that locks the session.";
+    lock = app "noctalia msg session lock" "Shell command that locks the session.";
   };
 
   config.assertions = [

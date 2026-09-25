@@ -160,7 +160,7 @@ and wlogout use:
 | `terminal` | `kitty` | `Super+Q` |
 | `launcher` | `noctalia msg panel-toggle launcher` | `Super+O` |
 | `fileManager` | `thunar` | `Super+E` |
-| `lock` | `hyprlock` | `Ctrl+Alt+L`, wlogout |
+| `lock` | `noctalia msg session lock` | `Ctrl+Alt+L`, wlogout |
 
 Override in a host's `home.nix`, for example `desktop.apps.terminal = "ghostty";`.
 

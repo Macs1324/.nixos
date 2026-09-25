@@ -86,6 +86,29 @@ in {
     monitor.hyprlandWorkspaces)
   enabled);
 
+  # Logical center of each enabled output, for Noctalia widgets placed in
+  # output-local coordinates. Outputs without a declared mode have no known size.
+  logicalCenters = lib.mapAttrs (_: monitor: let
+    sideways = monitor.rotation == 90 || monitor.rotation == 270;
+    width =
+      (
+        if sideways
+        then monitor.mode.height
+        else monitor.mode.width
+      )
+      / monitor.scale;
+    height =
+      (
+        if sideways
+        then monitor.mode.width
+        else monitor.mode.height
+      )
+      / monitor.scale;
+  in {
+    cx = width / 2.0;
+    cy = height / 2.0;
+  }) (lib.filterAttrs (_: monitor: monitor.mode != null) enabled);
+
   noctaliaWallpaper = {
     enabled = true;
     automation.enabled = false;

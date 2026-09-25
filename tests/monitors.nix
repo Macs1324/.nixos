@@ -93,6 +93,15 @@
       expr = output.noctaliaWallpaper.monitors ? DP-3;
       expected = false;
     };
+    testLogicalCenters = {
+      expr = output.logicalCenters;
+      expected = {
+        DP-1 = {
+          cx = 480.0;
+          cy = 2560.0 / 1.5 / 2.0;
+        };
+      };
+    };
     testWallpaperFallback = {
       expr = output.wallpapers.HDMI-A-1;
       expected = wallpaper;

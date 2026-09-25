@@ -23,6 +23,9 @@ def reset_overrides(path, connectors):
         ("wallpaper", "default", "path"),
         ("wallpaper", "last", "path"),
         *(("wallpaper", "monitors", name, "path") for name in connectors),
+        # A saved order drops every lock screen widget it does not list,
+        # including the Nix-declared ones.
+        ("lockscreen_widgets", "widget_order"),
     ]
     for keys in owned:
         table = document
