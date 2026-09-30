@@ -222,51 +222,87 @@ fn finish(a: &config::Attractor, mut pixels: Vec<u8>, levels: [f32; 3]) -> Vec<u
         .collect()
 }
 
-/// Loads every configured attractor onto the simulation; returns the clocks,
-/// which the caller updates every frame. A broken attractor is logged and
-/// skipped, never fatal.
+/// Loads every configured attractor onto the simulation, and the password
+/// dots; returns the live ones, which the caller updates every frame. A
+/// broken attractor is logged and skipped, never fatal.
 pub(crate) fn install(
     attractors: &[config::Attractor],
     screens: &[Screen],
     primary: usize,
+    dots: Dots,
     gpu: &crate::gpu::Gpu,
     sim: &mut crate::gpu::Sim,
-) -> Vec<Clock> {
+) -> Vec<Live> {
     let mut targets = Vec::new();
-    let mut clocks = Vec::new();
+    let mut live = Vec::new();
     for a in attractors {
         match load(a, screens, primary) {
             Ok(Loaded::Still(t)) => targets.push((t, a.emerge, a.reach)),
-            Ok(Loaded::Clock(mut clock)) => match clock.update() {
+            Ok(Loaded::Live(mut widget)) => match widget.update(&[]) {
                 Some(t) => {
                     targets.push((t, a.emerge, a.reach));
-                    clocks.push(clock);
+                    live.push(widget);
                 }
-                None => log::error!("clock: cannot read the local time"),
+                None => log::error!("{}: nothing to show", a.describe()),
             },
             Err(e) => log::error!("attractor {}: {e:#}", a.describe()),
         }
     }
-    if !targets.is_empty() {
-        sim.set_targets(gpu, &targets);
+    // Last, so the dots win wherever they overlap an attractor.
+    let mut dots = Live::Dots(dots);
+    if let Some(t) = dots.update(&[]) {
+        targets.push((t, DOTS.emerge, DOTS.reach * screens[primary].place.size[1] as f32 / 1440.0));
+        live.push(dots);
     }
-    clocks
+    sim.set_targets(gpu, &targets);
+    live
 }
 
-/// A loaded attractor: a still image, or a clock that re-renders when the
-/// time it shows changes.
+/// A loaded attractor: a still image, or a live one that re-renders when
+/// what it shows changes.
 pub(crate) enum Loaded {
     Still(Target),
+    Live(Live),
+}
+
+/// An attractor that changes: its rectangle stays, its pixels are
+/// re-rendered, and only the pixels that change release or recruit grains.
+pub(crate) enum Live {
     Clock(Clock),
+    Life(Life),
+    Dots(Dots),
+}
+
+impl Live {
+    /// The new target if what it shows has changed since the last call
+    /// (always on the first). `dots` are the password dots (x, y, size
+    /// 0..1) in canvas px.
+    pub(crate) fn update(&mut self, dots: &[[f32; 3]]) -> Option<Target> {
+        match self {
+            Live::Clock(c) => c.update(),
+            Live::Life(l) => l.update(),
+            Live::Dots(d) => d.update(dots),
+        }
+    }
+}
+
+/// A widget's single colour as a target pixel: tone-mapped like an image
+/// (`finish`), with the attractor's firmness. Widgets paint with it directly
+/// rather than tone-mapping every frame.
+fn ink(a: &config::Attractor, levels: [f32; 3]) -> [u8; 4] {
+    let [r, g, b] = a.color.map_or([255; 3], |c| c.0);
+    let px = finish(a, vec![r, g, b, 255], levels);
+    [px[0], px[1], px[2], px[3]]
 }
 
 /// Loads an attractor and places it on its output.
 pub(crate) fn load(a: &config::Attractor, screens: &[Screen], primary: usize) -> anyhow::Result<Loaded> {
     let screen = screen_for(a, screens, primary)?;
-    match (&a.image, a.clock) {
-        (Some(image), None) => load_image(a, image, screen).map(Loaded::Still),
-        (None, Some(spec)) => Clock::new(a, spec, screen).map(Loaded::Clock),
-        _ => bail!("an attractor needs exactly one of `image` and `clock`"),
+    match (&a.image, a.clock, a.life) {
+        (Some(image), None, None) => load_image(a, image, screen).map(Loaded::Still),
+        (None, Some(spec), None) => Clock::new(a, spec, screen).map(|c| Loaded::Live(Live::Clock(c))),
+        (None, None, Some(spec)) => Life::new(a, spec, screen).map(|l| Loaded::Live(Live::Life(l))),
+        _ => bail!("an attractor needs exactly one of `image`, `clock` and `life`"),
     }
 }
 
@@ -468,9 +504,316 @@ impl Clock {
     }
 }
 
+// ---- Game of Life ----------------------------------------------------------------
+
+/// Tiny xorshift RNG for seeding boards.
+struct Rng(u64);
+
+impl Rng {
+    fn next(&mut self) -> f32 {
+        self.0 ^= self.0 << 13;
+        self.0 ^= self.0 >> 7;
+        self.0 ^= self.0 << 17;
+        (self.0 >> 40) as f32 / (1u64 << 24) as f32
+    }
+}
+
+/// How many recent generations a new one is compared against: a game that
+/// repeats within this many steps (or freezes) is over.
+const LIFE_MEMORY: usize = 12;
+
+/// Conway's Game of Life on a board that wraps around at the edges.
+pub(crate) struct Life {
+    spec: config::Life,
+    origin: [u32; 2],
+    size: [u32; 2],
+    /// Cells across and down, their size in px, and the board's offset
+    /// within the rectangle (centred).
+    cells: [usize; 2],
+    cell: u32,
+    margin: [u32; 2],
+    alive: Vec<bool>,
+    /// Hashes of the last generations, to spot a finished game.
+    seen: std::collections::VecDeque<u64>,
+    rng: Rng,
+    ink: [u8; 4],
+    start: std::time::Instant,
+    /// Generations shown so far (None = not drawn yet).
+    shown: Option<u64>,
+    /// The rendered target, reused between generations.
+    rgba: Vec<u8>,
+}
+
+impl Life {
+    fn new(a: &config::Attractor, spec: config::Life, screen: &Screen) -> anyhow::Result<Self> {
+        let place = screen.place;
+        // At scale 1 the board is its output.
+        let size = fit(a, place.size[0], place.size[1], place)?;
+        let cell = ((spec.cell * place.size[1] as f32 / 1440.0).round() as u32).max(4);
+        let cells = [(size[0] / cell).max(3) as usize, (size[1] / cell).max(3) as usize];
+        let margin = [0, 1].map(|k| size[k].saturating_sub(cells[k] as u32 * cell) / 2);
+        let seed = std::time::SystemTime::now()
+            .duration_since(std::time::UNIX_EPOCH)
+            .map_or(1, |d| d.as_nanos() as u64)
+            | 1;
+        let mut life = Self {
+            spec,
+            origin: origin(a, size, place),
+            size,
+            cells,
+            cell,
+            margin,
+            alive: vec![false; cells[0] * cells[1]],
+            seen: Default::default(),
+            rng: Rng(seed),
+            ink: ink(a, screen.levels),
+            start: std::time::Instant::now(),
+            shown: None,
+            rgba: Vec::new(),
+        };
+        life.seed();
+        Ok(life)
+    }
+
+    /// A new random game.
+    fn seed(&mut self) {
+        let fill = self.spec.fill;
+        for c in &mut self.alive {
+            *c = self.rng.next() < fill;
+        }
+        self.seen.clear();
+    }
+
+    fn hash(&self) -> u64 {
+        self.alive.iter().fold(0xcbf2_9ce4_8422_2325u64, |h, &c| (h ^ u64::from(c)).wrapping_mul(0x0100_0000_01b3))
+    }
+
+    /// One generation (B3/S23), or a new game if this one is over.
+    fn step(&mut self) {
+        let [w, h] = self.cells;
+        let at = |x: usize, y: usize| self.alive[y * w + x];
+        let next: Vec<bool> = (0..w * h)
+            .map(|i| {
+                let (x, y) = (i % w, i / w);
+                let mut n = 0;
+                for dy in [h - 1, 0, 1] {
+                    for dx in [w - 1, 0, 1] {
+                        if (dx, dy) != (0, 0) && at((x + dx) % w, (y + dy) % h) {
+                            n += 1;
+                        }
+                    }
+                }
+                n == 3 || (n == 2 && at(x, y))
+            })
+            .collect();
+        self.alive = next;
+        let hash = self.hash();
+        let over = !self.alive.contains(&true) || self.seen.contains(&hash);
+        self.seen.push_back(hash);
+        if self.seen.len() > LIFE_MEMORY {
+            self.seen.pop_front();
+        }
+        if over {
+            self.seed();
+        }
+    }
+
+    /// Paints the board: every live cell a solid square with a gap around it.
+    fn render(&mut self) -> Vec<u8> {
+        let [w, h] = self.size;
+        self.rgba.clear();
+        self.rgba.resize((w * h * 4) as usize, 0);
+        let gap = (self.cell as f32 * 0.12).round().max(2.0) as u32;
+        let live: Vec<usize> = (0..self.alive.len()).filter(|&i| self.alive[i]).collect();
+        for i in live {
+            let (cx, cy) = ((i % self.cells[0]) as u32, (i / self.cells[0]) as u32);
+            let x0 = self.margin[0] + cx * self.cell + gap / 2;
+            let y0 = self.margin[1] + cy * self.cell + gap / 2;
+            for y in y0..(y0 + self.cell - gap).min(h) {
+                let row = ((y * w + x0) * 4) as usize;
+                let len = (self.cell - gap).min(w - x0) as usize;
+                for px in self.rgba[row..row + len * 4].as_chunks_mut::<4>().0 {
+                    *px = self.ink;
+                }
+            }
+        }
+        self.rgba.clone()
+    }
+
+    fn update(&mut self) -> Option<Target> {
+        let generation = (self.start.elapsed().as_secs_f32() / self.spec.period) as u64;
+        if self.shown == Some(generation) {
+            return None;
+        }
+        // Catch up without redrawing each step (e.g. after the outputs slept).
+        for _ in self.shown.unwrap_or(generation)..generation {
+            self.step();
+        }
+        self.shown = Some(generation);
+        Some(Target { origin: self.origin, size: self.size, rgba: self.render() })
+    }
+}
+
+// ---- password dots ---------------------------------------------------------------
+
+/// The password dots' attractor settings: firm, quick to form (typing wants
+/// an answer), and reaching far for light grains on a dark desktop.
+const DOTS: DotsTuning = DotsTuning { firmness: 1.0, emerge: 0.25, reach: 260.0 };
+
+struct DotsTuning {
+    firmness: f32,
+    emerge: f32,
+    reach: f32,
+}
+
+/// The password dots as an attractor: each dot a disc of sand, sized by
+/// its pop-in and pulse, and blown apart with every other attractor by a
+/// wrong password's eruption.
+pub(crate) struct Dots {
+    origin: [u32; 2],
+    size: [u32; 2],
+    radius: f32,
+    ink: [u8; 4],
+    /// What was last drawn: (x, y, radius) rounded to half pixels.
+    shown: Option<Vec<[i32; 3]>>,
+}
+
+impl Dots {
+    /// `row` is the dots' centre line (canvas px), `width` as wide as the
+    /// row may get, `radius` a full-size dot's; `levels` the primary
+    /// output's (see `Screen`).
+    pub(crate) fn new(row: [f32; 2], width: f32, radius: f32, canvas: [u32; 2], levels: [f32; 3]) -> Self {
+        let a = config::Attractor {
+            firmness: DOTS.firmness,
+            ..config::Attractor::widget()
+        };
+        let half = [width / 2.0 + 2.0 * radius, 2.0 * radius];
+        let x0 = (row[0] - half[0]).clamp(0.0, canvas[0] as f32) as u32;
+        let y0 = (row[1] - half[1]).clamp(0.0, canvas[1] as f32) as u32;
+        let x1 = ((row[0] + half[0]).ceil() as u32).min(canvas[0]).max(x0 + 1);
+        let y1 = ((row[1] + half[1]).ceil() as u32).min(canvas[1]).max(y0 + 1);
+        Self { origin: [x0, y0], size: [x1 - x0, y1 - y0], radius, ink: ink(&a, levels), shown: None }
+    }
+
+    fn update(&mut self, dots: &[[f32; 3]]) -> Option<Target> {
+        let key: Vec<[i32; 3]> = dots
+            .iter()
+            .map(|d| [d[0], d[1], d[2] * self.radius].map(|v| (v * 2.0).round() as i32))
+            .collect();
+        if self.shown.as_ref() == Some(&key) {
+            return None;
+        }
+        let [w, h] = self.size;
+        let mut rgba = vec![0u8; (w * h * 4) as usize];
+        for d in dots {
+            let r = d[2].clamp(0.0, 1.0) * self.radius;
+            if r < 0.5 {
+                continue;
+            }
+            let (cx, cy) = (d[0] - self.origin[0] as f32, d[1] - self.origin[1] as f32);
+            let ys = (cy - r).floor().max(0.0) as u32..((cy + r).ceil().max(0.0) as u32).min(h);
+            for y in ys {
+                for x in (cx - r).floor().max(0.0) as u32..((cx + r).ceil().max(0.0) as u32).min(w) {
+                    let (dx, dy) = (x as f32 + 0.5 - cx, y as f32 + 0.5 - cy);
+                    if dx * dx + dy * dy <= r * r {
+                        let o = ((y * w + x) * 4) as usize;
+                        rgba[o..o + 4].copy_from_slice(&self.ink);
+                    }
+                }
+            }
+        }
+        self.shown = Some(key);
+        Some(Target { origin: self.origin, size: self.size, rgba })
+    }
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    fn life(cells: [usize; 2], alive: &[(usize, usize)]) -> Life {
+        let mut l = Life {
+            spec: config::Life::default(),
+            origin: [0, 0],
+            size: [cells[0] as u32 * 10, cells[1] as u32 * 10],
+            cells,
+            cell: 10,
+            margin: [0, 0],
+            alive: vec![false; cells[0] * cells[1]],
+            seen: Default::default(),
+            rng: Rng(7),
+            ink: [255; 4],
+            start: std::time::Instant::now(),
+            shown: None,
+            rgba: Vec::new(),
+        };
+        for &(x, y) in alive {
+            l.alive[y * cells[0] + x] = true;
+        }
+        l
+    }
+
+    fn alive(l: &Life) -> Vec<(usize, usize)> {
+        (0..l.alive.len()).filter(|&i| l.alive[i]).map(|i| (i % l.cells[0], i / l.cells[0])).collect()
+    }
+
+    #[test]
+    fn life_blinker_oscillates() {
+        let mut l = life([5, 5], &[(1, 2), (2, 2), (3, 2)]);
+        l.step();
+        assert_eq!(alive(&l), [(2, 1), (2, 2), (2, 3)]);
+        l.step();
+        assert_eq!(alive(&l), [(1, 2), (2, 2), (3, 2)]);
+    }
+
+    #[test]
+    fn life_glider_travels_and_wraps() {
+        // A glider moves one cell diagonally every 4 generations; on an 8x8
+        // board that wraps, it is back where it started after 32. It never
+        // repeats within LIFE_MEMORY generations, so it is never reseeded.
+        let start = [(1, 0), (2, 1), (0, 2), (1, 2), (2, 2)];
+        let mut l = life([8, 8], &start);
+        for _ in 0..4 {
+            l.step();
+        }
+        assert_eq!(alive(&l), [(2, 1), (3, 2), (1, 3), (2, 3), (3, 3)]);
+        for _ in 4..32 {
+            l.step();
+        }
+        let mut sorted = start.to_vec();
+        sorted.sort_by_key(|&(x, y)| (y, x));
+        assert_eq!(alive(&l), sorted);
+    }
+
+    #[test]
+    fn life_reseeds_when_over() {
+        // A lone cell dies: a new game starts at once.
+        let mut l = life([20, 20], &[(5, 5)]);
+        l.step();
+        assert!(alive(&l).len() > 40, "{} alive", alive(&l).len());
+    }
+
+    #[test]
+    fn life_paints_cells_with_gaps() {
+        let mut l = life([3, 1], &[(1, 0)]);
+        let px = l.render();
+        let at = |x: u32, y: u32| px[((y * 30 + x) * 4) as usize];
+        assert_eq!(at(15, 5), 255, "inside the cell");
+        assert_eq!(at(5, 5), 0, "a dead cell");
+        assert_eq!(at(10, 5), 0, "the gap");
+    }
+
+    #[test]
+    fn dots_grow_and_go() {
+        let mut d = Dots { origin: [0, 0], size: [100, 40], radius: 8.0, ink: [255; 4], shown: None };
+        let ink = |t: &Target| t.rgba.chunks(4).filter(|p| p[3] != 0).count();
+        let full = ink(&d.update(&[[50.0, 20.0, 1.0]]).unwrap());
+        assert!((180..=220).contains(&full), "{full}");
+        assert!(d.update(&[[50.0, 20.0, 1.0]]).is_none(), "unchanged");
+        let half = ink(&d.update(&[[50.0, 20.0, 0.5]]).unwrap());
+        assert!(half * 3 < full && half > 0);
+        assert_eq!(ink(&d.update(&[]).unwrap()), 0);
+    }
 
     fn clock(seconds: bool, twelve_hour: bool) -> config::Clock {
         config::Clock { seconds, twelve_hour }

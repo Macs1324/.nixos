@@ -30,6 +30,8 @@ impl Rng {
 }
 
 const RELEASE_DELAY: f32 = 0.15;
+/// Password dots shown at most; more characters still count.
+const MAX_DOTS: usize = 32;
 const HOMING_RAMP: f32 = 0.35;
 const SHAKE: f32 = 0.4;
 /// Wind force (cells/s²) at `intensity = 1`.
@@ -62,8 +64,10 @@ pub(crate) struct Storm {
     /// Where the dots sit: centre of the primary output's lower third.
     anchor: [f32; 2],
     spacing: f32,
-    pub(crate) dot_radius: f32,
+    dot_radius: f32,
     dots: Vec<Dot>,
+    /// Characters typed beyond `MAX_DOTS`, which get no dot.
+    undotted: usize,
     pending: Vec<Splat>,
     /// Splats that go off later (the eruption's shockwave).
     scheduled: Vec<(f32, Splat)>,
@@ -98,9 +102,11 @@ impl Storm {
             canvas,
             cell,
             anchor: [o[0] + s[0] * 0.5, o[1] + s[1] * 0.78],
-            spacing: s[1] * 0.022,
-            dot_radius: s[1] * 0.0055,
+            // Discs of sand (attract::Dots) need more room than drawn dots.
+            spacing: s[1] * 0.03,
+            dot_radius: s[1] * 0.008,
             dots: Vec::new(),
+            undotted: 0,
             pending: Vec::new(),
             scheduled: Vec::new(),
             shatter: false,
@@ -120,9 +126,20 @@ impl Storm {
         [self.anchor[0] + offset, self.anchor[1]]
     }
 
+    /// Where the password dots go (see `dots`): the row's centre, how wide
+    /// it may get (`MAX_DOTS` dots, shaking), and a full dot's radius, in
+    /// canvas px.
+    pub(crate) fn dots_row(&self) -> ([f32; 2], f32, f32) {
+        (self.anchor, (MAX_DOTS as f32 + 1.5) * self.spacing, self.dot_radius)
+    }
+
     pub(crate) fn typed(&mut self) {
         if self.shake.take().is_some() {
-            self.dots.clear();
+            self.cleared();
+        }
+        if self.dots.len() == MAX_DOTS {
+            self.undotted += 1;
+            return;
         }
         let n = self.dots.len() + 1;
         let at = self.dot_pos(n - 1, n);
@@ -130,19 +147,18 @@ impl Storm {
         for i in 0..self.dots.len() {
             self.dots[i].at = self.dot_pos(i, n);
         }
+        // No burst of wind: the dot gathering its sand is movement enough.
         self.dots.push(Dot {
             at,
             born: self.time,
         });
-        let spin = self.rng.sign() * 70.0;
-        self.pending.push(Splat::Vortex {
-            at: self.cells(at),
-            spin,
-            radius: 2.5,
-        });
     }
 
     pub(crate) fn erased(&mut self) {
+        if self.undotted > 0 {
+            self.undotted -= 1;
+            return;
+        }
         self.dots.pop();
         let n = self.dots.len();
         for i in 0..n {
@@ -152,6 +168,7 @@ impl Storm {
 
     pub(crate) fn cleared(&mut self) {
         self.dots.clear();
+        self.undotted = 0;
     }
 
     pub(crate) fn submitted(&mut self) {
@@ -276,7 +293,7 @@ impl Storm {
 
     pub(crate) fn correct(&mut self) {
         self.phase = Phase::Homing { since: self.time };
-        self.dots.clear();
+        self.cleared();
     }
 
     /// Seconds since the grains started flying home, if they have.
@@ -333,7 +350,7 @@ impl Storm {
         self.entropy *= (-dt / 8.0).exp();
         if self.shake.is_some_and(|t| self.time - t >= SHAKE) {
             self.shake = None;
-            self.dots.clear();
+            self.cleared();
         }
 
         params.time = self.time;

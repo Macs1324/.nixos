@@ -43,7 +43,8 @@ in {
       {
         clock = {};
         color = config.lib.stylix.colors.withHashtag.base0D;
-        position = [0.5 0.72];
+        # Above the password dots, which sit at 0.78.
+        position = [0.5 0.64];
         scale = 2.4;
       }
     ];

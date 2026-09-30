@@ -17,7 +17,7 @@ pub(crate) struct Config {
 
 /// An image (or a live widget) whose opaque pixels pull in the most similar
 /// grains, so it emerges from the storm out of the desktop's own pixels.
-/// Exactly one of `image` and `clock` must be set.
+/// Exactly one of `image`, `clock` and `life` must be set.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Attractor {
@@ -27,13 +27,18 @@ pub(crate) struct Attractor {
     /// A live clock instead of an image.
     #[serde(default)]
     pub(crate) clock: Option<Clock>,
+    /// Conway's Game of Life instead of an image: it fills its output (or
+    /// `width`, keeping the output's shape) with cells that live and die.
+    #[serde(default)]
+    pub(crate) life: Option<Life>,
     /// Connector name ("DP-1"); default: the largest output.
     #[serde(default)]
     pub(crate) output: Option<String>,
     /// Centre of the image as a fraction of the output.
     #[serde(default = "Attractor::default_position")]
     pub(crate) position: [f32; 2],
-    /// Screen pixels per image pixel (a clock is 100 px tall at 1).
+    /// Screen pixels per image pixel (a clock is 100 px tall at 1; a Game of
+    /// Life fills its output at 1).
     #[serde(default = "Attractor::one")]
     pub(crate) scale: f32,
     /// Width in screen pixels (overrides `scale`, keeps the aspect ratio).
@@ -55,6 +60,26 @@ pub(crate) struct Attractor {
     /// its grains are matched against. Images use their own colours.
     #[serde(default)]
     pub(crate) color: Option<Rgb>,
+}
+
+/// A Game of Life attractor: square cells on a board that wraps around at
+/// the edges, stepping every `period`; when the game dies out, freezes or
+/// falls into a short loop, a new one is seeded.
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub(crate) struct Life {
+    /// Cell size in screen px (on a 1440 px tall canvas).
+    pub(crate) cell: f32,
+    /// Seconds per generation.
+    pub(crate) period: f32,
+    /// Share of cells alive in a new game.
+    pub(crate) fill: f32,
+}
+
+impl Default for Life {
+    fn default() -> Self {
+        Self { cell: 40.0, period: 1.5, fill: 0.3 }
+    }
 }
 
 /// An sRGB colour, written "#rrggbb" (the "#" is optional).
@@ -112,13 +137,37 @@ impl Attractor {
         150.0
     }
 
+    /// A widget's settings, as the defaults for one in a config file.
+    pub(crate) fn widget() -> Self {
+        Self {
+            image: None,
+            clock: None,
+            life: None,
+            output: None,
+            position: Self::default_position(),
+            scale: 1.0,
+            width: None,
+            firmness: Self::half(),
+            emerge: Self::default_emerge(),
+            reach: Self::default_reach(),
+            tone: Tone::default(),
+            color: None,
+        }
+    }
+
     /// Names the attractor in messages: its image path, or "clock".
     pub(crate) fn describe(&self) -> String {
-        match (&self.image, &self.clock) {
-            (Some(image), _) => image.display().to_string(),
-            (None, Some(_)) => "clock".into(),
-            (None, None) => "attractor".into(),
+        match (&self.image, &self.clock, &self.life) {
+            (Some(image), _, _) => image.display().to_string(),
+            (None, Some(_), _) => "clock".into(),
+            (None, None, Some(_)) => "life".into(),
+            (None, None, None) => "attractor".into(),
         }
+    }
+
+    /// How many of `image`, `clock` and `life` are set (exactly one must be).
+    pub(crate) fn sources(&self) -> usize {
+        usize::from(self.image.is_some()) + usize::from(self.clock.is_some()) + usize::from(self.life.is_some())
     }
 }
 
@@ -215,10 +264,16 @@ pub(crate) fn load(path: &Path) -> anyhow::Result<Config> {
     }
     for a in &config.attractors {
         anyhow::ensure!(
-            a.image.is_some() != a.clock.is_some(),
-            "{}: an attractor needs exactly one of `image` and `clock`",
+            a.sources() == 1,
+            "{}: an attractor needs exactly one of `image`, `clock` and `life`",
             a.describe()
         );
+        if let Some(life) = a.life {
+            anyhow::ensure!(
+                life.cell >= 4.0 && life.period > 0.0 && (0.0..=1.0).contains(&life.fill),
+                "life: cell must be >= 4, period > 0 and fill 0..1"
+            );
+        }
         anyhow::ensure!(
             a.emerge > 0.0 && a.reach >= 1.0,
             "{}: emerge must be > 0 and reach >= 1",
@@ -256,6 +311,14 @@ mod tests {
     }
 
     #[test]
+    fn life_attractor() {
+        let c: Config = toml::from_str("[[attractor]]\nlife = { cell = 30 }\n").unwrap();
+        let life = c.attractors[0].life.unwrap();
+        assert_eq!((life.cell, life.period, life.fill), (30.0, 1.5, 0.3));
+        assert_eq!(c.attractors[0].sources(), 1);
+    }
+
+    #[test]
     fn widget_colours() {
         let c: Config = toml::from_str("[[attractor]]\nclock = {}\ncolor = \"#83a598\"\n").unwrap();
         assert_eq!(c.attractors[0].color, Some(Rgb([0x83, 0xa5, 0x98])));
@@ -271,7 +334,7 @@ mod tests {
         let dir = std::env::temp_dir().join(format!("sandlock-config-{}", std::process::id()));
         std::fs::create_dir_all(&dir).unwrap();
         let path = dir.join("config.toml");
-        for text in ["[[attractor]]\n", "[[attractor]]\nimage = \"/x.png\"\nclock = {}\n"] {
+        for text in ["[[attractor]]\n", "[[attractor]]\nimage = \"/x.png\"\nclock = {}\n", "[[attractor]]\nclock = {}\nlife = {}\n"] {
             std::fs::write(&path, text).unwrap();
             assert!(load(&path).is_err(), "{text:?} was accepted");
         }

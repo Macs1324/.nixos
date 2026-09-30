@@ -13,13 +13,8 @@ struct View {
     size: vec2<f32>,
     alpha: f32,           // fades the unlock handoff overlay
     srgb_surface: u32,    // 1 if the surface re-encodes to sRGB on write
-    dot_count: u32,
-    dot_radius: f32,
-    n_outputs: u32,
     canvas_w: u32,
     canvas_h: u32,
-    _pad0: u32,
-    dots: array<vec4<f32>, 64>,  // xy centre (canvas px), z opacity
 }
 
 // ---- scatter (one pass per frame, all outputs) --------------------------------
@@ -136,16 +131,6 @@ fn compose_fs(@builtin(position) frag: vec4<f32>) -> @location(0) vec4<f32> {
             col = sum / weight;
             break;
         }
-    }
-    // Password dots: a soft dark halo keeps them readable on any colour.
-    let c = V.origin + frag.xy;
-    for (var i = 0u; i < V.dot_count; i++) {
-        let d = V.dots[i];
-        let dist = length(c - d.xy);
-        let halo = (1.0 - smoothstep(V.dot_radius, V.dot_radius * 2.4, dist)) * 0.45 * d.z;
-        col = mix(col, vec3<f32>(0.0), halo);
-        let core = (1.0 - smoothstep(V.dot_radius - 1.0, V.dot_radius + 0.5, dist)) * d.z;
-        col = mix(col, vec3<f32>(0.93, 0.95, 0.98), core);
     }
     if (V.srgb_surface == 1u) {
         col = srgb_to_linear(col);

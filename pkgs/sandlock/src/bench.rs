@@ -44,7 +44,7 @@ struct Scene {
     gpu: Gpu,
     sim: Sim,
     storm: Storm,
-    clocks: Vec<attract::Clock>,
+    live: Vec<attract::Live>,
     outputs: Vec<(Compose, wgpu::Texture, wgpu::TextureView)>,
 }
 
@@ -53,14 +53,15 @@ impl Scene {
     fn frame(&mut self) {
         let splats = self.storm.step(DT, &mut self.sim.params);
         self.sim.step(&self.gpu, DT, &splats);
-        for clock in &mut self.clocks {
-            if let Some(t) = clock.update() {
+        let dots = self.storm.dots();
+        for widget in &mut self.live {
+            if let Some(t) = widget.update(&dots) {
                 self.sim.update_target(&self.gpu, &t);
             }
         }
         self.sim.rasterize(&self.gpu);
         for (compose, _, target) in &self.outputs {
-            compose.draw(&self.gpu, &self.sim, target, 1.0, &[], 0.0);
+            compose.draw(&self.gpu, &self.sim, target, 1.0);
         }
     }
 
@@ -77,7 +78,7 @@ impl Scene {
         self.wait()?;
         let t2 = Instant::now();
         for (compose, _, target) in &self.outputs {
-            compose.draw(&self.gpu, &self.sim, target, 1.0, &[], 0.0);
+            compose.draw(&self.gpu, &self.sim, target, 1.0);
         }
         self.wait()?;
         Ok([t1 - t0, t2 - t1, t2.elapsed()])
@@ -126,14 +127,6 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
         })
         .collect();
     let t_sim = t0.elapsed() - t_gpu;
-    let clocks = attract::install(&config.attractors, &screens, primary, &gpu, &mut sim);
-    gpu.device.poll(wgpu::PollType::wait_indefinitely())?;
-    println!(
-        "startup: GPU {:.0} ms, simulation {:.0} ms, attractors {:.0} ms",
-        t_gpu.as_secs_f64() * 1000.0,
-        t_sim.as_secs_f64() * 1000.0,
-        (t0.elapsed() - t_gpu - t_sim).as_secs_f64() * 1000.0
-    );
     let p = places[primary];
     let storm = Storm::new(
         [canvas[0] as f32, canvas[1] as f32],
@@ -141,6 +134,16 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
         ([p.origin[0] as f32, p.origin[1] as f32], [p.size[0] as f32, p.size[1] as f32]),
         0x9e37_79b9_7f4a_7c15,
         config.storm,
+    );
+    let (row, width, radius) = storm.dots_row();
+    let dots = attract::Dots::new(row, width, radius, canvas, screens[primary].levels);
+    let live = attract::install(&config.attractors, &screens, primary, dots, &gpu, &mut sim);
+    gpu.device.poll(wgpu::PollType::wait_indefinitely())?;
+    println!(
+        "startup: GPU {:.0} ms, simulation {:.0} ms, attractors {:.0} ms",
+        t_gpu.as_secs_f64() * 1000.0,
+        t_sim.as_secs_f64() * 1000.0,
+        (t0.elapsed() - t_gpu - t_sim).as_secs_f64() * 1000.0
     );
     let outputs = places
         .iter()
@@ -160,7 +163,10 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
             (compose, texture, view)
         })
         .collect();
-    let mut scene = Scene { gpu, sim, storm, clocks, outputs };
+    let mut scene = Scene { gpu, sim, storm, live, outputs };
+    // SANDLOCK_BENCH_TYPE=<n>: type n characters from 3 s on, one every
+    // 0.15 s, to see and time the password dots.
+    let typed: u32 = std::env::var("SANDLOCK_BENCH_TYPE").ok().and_then(|n| n.parse().ok()).unwrap_or(0);
 
     let original = roughness_of_images(&images, &places);
     println!("original roughness {original:.2} (mean |Δluma| between neighbours)");
@@ -175,6 +181,9 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
     let mut times = Vec::with_capacity(frames);
     let mut next = CHECKPOINTS.iter().copied().filter(|&t| t <= opts.secs).peekable();
     for f in 1..=frames {
+        if f >= 180 && (f - 180) % 9 == 0 && ((f - 180) / 9) < typed as usize {
+            scene.storm.typed();
+        }
         let start = Instant::now();
         scene.frame();
         scene.wait()?;

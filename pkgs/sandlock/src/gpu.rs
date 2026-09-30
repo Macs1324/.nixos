@@ -26,7 +26,6 @@ const SOLVER_ITERS: usize = 40; // even: results land back in slot 0; warm-start
 /// changes slowly, so fewer are needed).
 const DENSITY_ITERS: usize = 16;
 const MAX_SPLATS: usize = 32;
-const MAX_DOTS: usize = 64;
 
 #[repr(C)]
 #[derive(Clone, Copy, Pod, Zeroable)]
@@ -84,13 +83,8 @@ struct View {
     size: [f32; 2],
     alpha: f32,
     srgb_surface: u32,
-    dot_count: u32,
-    dot_radius: f32,
-    n_outputs: u32,
     canvas_w: u32,
     canvas_h: u32,
-    _pad: u32,
-    dots: [[f32; 4]; MAX_DOTS],
 }
 
 /// A force splatted into the fluid, in fluid cells.
@@ -367,7 +361,6 @@ pub(crate) struct Sim {
     splats_buf: wgpu::Buffer,
     /// Owned here; the passes reach it through their bind groups.
     _grains: wgpu::Buffer,
-    pub(crate) n_outputs: u32,
     advect: Pass,
     splat: Pass,
     curl: Pass,
@@ -908,7 +901,6 @@ impl Sim {
             params_buf,
             splats_buf,
             _grains: grains,
-            n_outputs: places.len() as u32,
             advect,
             splat,
             curl: curl_pass,
@@ -1172,8 +1164,8 @@ fn read_back(gpu: &Gpu, src: &wgpu::Buffer, size: u64) -> anyhow::Result<Vec<u32
 
 // ---- per-output rendering -------------------------------------------------------
 
-/// The compose pipeline for one output: draws the grains, the fade and the
-/// password dots into any render target of `format`.
+/// The compose pipeline for one output: draws the grains and the fade into
+/// any render target of `format`.
 pub(crate) struct Compose {
     pub(crate) place: Place,
     srgb: bool,
@@ -1239,30 +1231,14 @@ impl Compose {
     }
 
     /// Draws one frame from the owner buffer (`Sim::rasterize` first) into
-    /// `target`. `dots` are (x, y, opacity) in canvas px.
-    #[allow(clippy::too_many_arguments)]
-    pub(crate) fn draw(
-        &self,
-        gpu: &Gpu,
-        sim: &Sim,
-        target: &wgpu::TextureView,
-        alpha: f32,
-        dots: &[[f32; 3]],
-        dot_radius: f32,
-    ) {
+    /// `target`.
+    pub(crate) fn draw(&self, gpu: &Gpu, sim: &Sim, target: &wgpu::TextureView, alpha: f32) {
         let mut view = View::zeroed();
         view.origin = [self.place.origin[0] as f32, self.place.origin[1] as f32];
         view.size = [self.place.size[0] as f32, self.place.size[1] as f32];
         view.alpha = alpha;
         view.srgb_surface = u32::from(self.srgb);
-        view.dot_radius = dot_radius;
-        view.n_outputs = sim.n_outputs;
         [view.canvas_w, view.canvas_h] = sim.canvas;
-        let dots = &dots[..dots.len().min(MAX_DOTS)];
-        view.dot_count = dots.len() as u32;
-        for (slot, d) in view.dots.iter_mut().zip(dots) {
-            *slot = [d[0], d[1], d[2], 0.0];
-        }
         gpu.queue.write_buffer(&self.view_buf, 0, bytemuck::bytes_of(&view));
 
         let mut encoder = gpu.device.create_command_encoder(&Default::default());
@@ -1343,7 +1319,7 @@ impl OutputGfx {
     }
 
     /// Draws one frame (`Sim::rasterize` first) and presents it.
-    pub(crate) fn render(&mut self, gpu: &Gpu, sim: &Sim, alpha: f32, dots: &[[f32; 3]], dot_radius: f32) {
+    pub(crate) fn render(&mut self, gpu: &Gpu, sim: &Sim, alpha: f32) {
         let frame = match self.surface.get_current_texture() {
             wgpu::CurrentSurfaceTexture::Success(f) | wgpu::CurrentSurfaceTexture::Suboptimal(f) => f,
             wgpu::CurrentSurfaceTexture::Outdated | wgpu::CurrentSurfaceTexture::Lost => {
@@ -1353,7 +1329,7 @@ impl OutputGfx {
             _ => return,
         };
         let target = frame.texture.create_view(&Default::default());
-        self.compose.draw(gpu, sim, &target, alpha, dots, dot_radius);
+        self.compose.draw(gpu, sim, &target, alpha);
         gpu.queue.present(frame);
     }
 }

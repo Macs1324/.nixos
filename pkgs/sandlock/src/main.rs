@@ -111,40 +111,27 @@ impl Screen {
     }
 
     /// Draws a frame (after `Sim::rasterize`) and asks for the next callback.
-    fn draw(&mut self, now: Instant, qh: &QueueHandle<App>, gpu: &Gpu, sim: &Sim, overlay: &Overlay) {
+    fn draw(&mut self, now: Instant, qh: &QueueHandle<App>, gpu: &Gpu, sim: &Sim, alpha: f32) {
         let Some(gfx) = &mut self.gfx else { return };
         // Keep a steady cadence, but don't try to catch up after a stall.
         self.due = (self.due + FRAME_INTERVAL).max(now + FRAME_INTERVAL / 2);
         let surface = self.role.wl_surface();
         surface.frame(qh, FrameCallbackData(surface.clone()));
         self.waiting = Some(now);
-        let dots = if Some(self.output) == overlay.dots_on { overlay.dots } else { &[] };
-        gfx.render(gpu, sim, overlay.alpha, dots, overlay.dot_radius);
+        gfx.render(gpu, sim, alpha);
     }
 }
 
-/// What is drawn over the grains: fade and password dots.
-struct Overlay<'a> {
-    alpha: f32,
-    dots: &'a [[f32; 3]],
-    dots_on: Option<usize>,
-    dot_radius: f32,
-}
-
-impl Overlay<'_> {
-    const PLAIN: Overlay<'static> = Overlay { alpha: 1.0, dots: &[], dots_on: None, dot_radius: 0.0 };
-}
-
-/// Draws every screen that is due, rasterising the grains once for all of
-/// them; returns whether anything was drawn.
-fn draw_due(screens: &mut [Screen], qh: &QueueHandle<App>, gpu: &Gpu, sim: &Sim, overlay: &Overlay) -> bool {
+/// Draws every screen that is due at `alpha` (the unlock fade), rasterising
+/// the grains once for all of them; returns whether anything was drawn.
+fn draw_due(screens: &mut [Screen], qh: &QueueHandle<App>, gpu: &Gpu, sim: &Sim, alpha: f32) -> bool {
     let now = Instant::now();
     if !screens.iter().any(|s| s.due(now)) {
         return false;
     }
     sim.rasterize(gpu);
     for screen in screens.iter_mut().filter(|s| s.due(now)) {
-        screen.draw(now, qh, gpu, sim, overlay);
+        screen.draw(now, qh, gpu, sim, alpha);
     }
     true
 }
@@ -318,9 +305,6 @@ fn main() -> anyhow::Result<()> {
             levels: img.as_ref().map_or([20.0, 60.0, 200.0], |i| attract::levels(&i.bgra)),
         })
         .collect();
-    let mut clocks = attract::install(&config.attractors, &named, primary, &gpu, &mut sim);
-    drop(images);
-
     let p = places[primary];
     let seed = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)
@@ -337,6 +321,11 @@ fn main() -> anyhow::Result<()> {
         seed ^ 0x9e37_79b9_7f4a_7c15,
         config.storm,
     );
+    // The password dots are an attractor too, on the primary output.
+    let (row, width, radius) = storm.dots_row();
+    let dots = attract::Dots::new(row, width, radius, canvas, named[primary].levels);
+    let mut live = attract::install(&config.attractors, &named, primary, dots, &gpu, &mut sim);
+    drop(images);
 
     // Lock (or open the preview overlays) and wait for every surface.
     if preview {
@@ -455,12 +444,6 @@ fn main() -> anyhow::Result<()> {
             log::trace!("pointer at {at:?}{}", if entered { " (entered)" } else { "" });
             storm.pointer(at, entered);
         }
-        // Live attractors: only a changed time touches the targets.
-        for clock in &mut clocks {
-            if let Some(t) = clock.update() {
-                sim.update_target(&gpu, &t);
-            }
-        }
         if let Ok(ok) = auth_rx.try_recv() {
             if ok {
                 storm.correct()
@@ -486,14 +469,15 @@ fn main() -> anyhow::Result<()> {
             backlog -= SIM_DT;
         }
 
+        // Live attractors (clock, Game of Life, password dots): only what
+        // changed touches the targets.
         let dots = storm.dots();
-        let overlay = Overlay {
-            alpha: 1.0,
-            dots: &dots,
-            dots_on: Some(primary),
-            dot_radius: storm.dot_radius,
-        };
-        let drew = draw_due(&mut app.screens, &qh, &gpu, &sim, &overlay);
+        for widget in &mut live {
+            if let Some(t) = widget.update(&dots) {
+                sim.update_target(&gpu, &t);
+            }
+        }
+        let drew = draw_due(&mut app.screens, &qh, &gpu, &sim, 1.0);
         if drew {
             last_shown = now;
             frames += 1;
@@ -700,7 +684,7 @@ fn handoff_overlays(
     sim.rasterize(gpu);
     for overlay in &mut overlays {
         let mut gfx = make_gfx(gpu, sim, display, overlay, places[overlay.output], true)?;
-        gfx.render(gpu, sim, 1.0, &[], 0.0);
+        gfx.render(gpu, sim, 1.0);
         overlay.gfx = Some(gfx);
     }
     app.conn.roundtrip()?;
@@ -722,8 +706,7 @@ fn fade(
             break;
         }
         let alpha = 1.0 - t * t * (3.0 - 2.0 * t);
-        let overlay = Overlay { alpha, ..Overlay::PLAIN };
-        draw_due(&mut app.screens, qh, gpu, sim, &overlay);
+        draw_due(&mut app.screens, qh, gpu, sim, alpha);
     }
     app.screens.clear();
     app.conn.roundtrip()?;
