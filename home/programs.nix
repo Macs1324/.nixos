@@ -40,6 +40,11 @@
     };
   };
 
+  # Prebuilt nix-index database: `, cmd` runs anything from nixpkgs, and an
+  # unknown command names the package that provides it.
+  programs.nix-index.enable = true;
+  programs.nix-index-database.comma.enable = true;
+
   programs.cava = {
     enable = true;
   };

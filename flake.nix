@@ -40,6 +40,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Weekly prebuilt nix-index database, used by comma and command-not-found.
+    nix-index-database = {
+      url = "github:nix-community/nix-index-database";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Tracks Claude Code releases within hours; nixpkgs lags by days.
     llm-agents = {
       url = "github:numtide/llm-agents.nix";
@@ -105,6 +111,7 @@
           inputs.niri.homeModules.niri
           inputs.noctalia.homeModules.default
           inputs.spicetify-nix.homeManagerModules.default
+          inputs.nix-index-database.homeModules.nix-index
           (./hosts + "/${host}/home.nix")
         ];
       });

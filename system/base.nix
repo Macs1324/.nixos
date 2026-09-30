@@ -152,5 +152,9 @@ in {
     };
   };
 
+  # The channel-based database is absent on flake systems; comma and
+  # nix-index-database (home/programs.nix) provide command-not-found instead.
+  programs.command-not-found.enable = false;
+
   system.stateVersion = "24.05";
 }
