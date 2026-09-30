@@ -1095,6 +1095,7 @@ dependencies = [
  "bytemuck",
  "env_logger",
  "log",
+ "naga",
  "png",
  "pollster",
  "raw-window-handle",

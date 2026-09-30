@@ -21,7 +21,7 @@ pub(crate) struct Target {
 }
 
 /// Decodes any PNG into straight-alpha RGBA8.
-fn decode(path: &std::path::Path) -> anyhow::Result<(u32, u32, Vec<u8>)> {
+pub(crate) fn decode(path: &std::path::Path) -> anyhow::Result<(u32, u32, Vec<u8>)> {
     let file = std::fs::File::open(path).with_context(|| format!("opening {}", path.display()))?;
     let mut decoder = png::Decoder::new(BufReader::new(file));
     decoder.set_transformations(
@@ -220,6 +220,37 @@ fn finish(a: &config::Attractor, mut pixels: Vec<u8>, levels: [f32; 3]) -> Vec<u
         .as_chunks::<4>().0.iter()
         .flat_map(|p| [p[0], p[1], p[2], if p[3] >= 128 { firmness } else { 0 }])
         .collect()
+}
+
+/// Loads every configured attractor onto the simulation; returns the clocks,
+/// which the caller updates every frame. A broken attractor is logged and
+/// skipped, never fatal.
+pub(crate) fn install(
+    attractors: &[config::Attractor],
+    screens: &[Screen],
+    primary: usize,
+    gpu: &crate::gpu::Gpu,
+    sim: &mut crate::gpu::Sim,
+) -> Vec<Clock> {
+    let mut targets = Vec::new();
+    let mut clocks = Vec::new();
+    for a in attractors {
+        match load(a, screens, primary) {
+            Ok(Loaded::Still(t)) => targets.push((t, a.emerge, a.reach)),
+            Ok(Loaded::Clock(mut clock)) => match clock.update() {
+                Some(t) => {
+                    targets.push((t, a.emerge, a.reach));
+                    clocks.push(clock);
+                }
+                None => log::error!("clock: cannot read the local time"),
+            },
+            Err(e) => log::error!("attractor {}: {e:#}", a.describe()),
+        }
+    }
+    if !targets.is_empty() {
+        sim.set_targets(gpu, &targets);
+    }
+    clocks
 }
 
 /// A loaded attractor: a still image, or a clock that re-renders when the

@@ -600,7 +600,6 @@ impl Sim {
             "turbulence",
             &[(0, Res::Params), (5, Res::View(&psi[0])), (7, Res::View(&psi[1]))],
         );
-
         // Attractors: the target image (rgb colour, a firmness), and the
         // claims between target pixels and grains (see attract.wgsl).
         let targets_tex = device.create_texture(&wgpu::TextureDescriptor {
@@ -844,28 +843,19 @@ impl Sim {
         gpu.queue.submit([encoder.finish()]);
     }
 
+    /// Reads the owner buffer back (grain id + 1 per canvas pixel, top bits
+    /// = priority). Blocks on the GPU: for statistics only.
+    pub(crate) fn read_owner(&self, gpu: &Gpu) -> anyhow::Result<Vec<u32>> {
+        let [w, h] = self.canvas;
+        read_back(gpu, &self.owner, u64::from(w) * u64::from(h) * 4)
+    }
+
     /// Debug statistic: share of canvas pixels with no grain (before gap
     /// filling) within `band` px of a wall, and elsewhere. Blocks on the GPU.
     #[cfg(debug_assertions)]
     pub(crate) fn coverage(&self, gpu: &Gpu, band: u32) -> anyhow::Result<(f32, f32)> {
         let [w, h] = self.canvas;
-        let size = u64::from(w) * u64::from(h) * 4;
-        let buf = gpu.device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("coverage"),
-            size,
-            usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
-            mapped_at_creation: false,
-        });
-        let mut encoder = gpu.device.create_command_encoder(&Default::default());
-        encoder.copy_buffer_to_buffer(&self.owner, 0, &buf, 0, size);
-        gpu.queue.submit([encoder.finish()]);
-        buf.slice(..).map_async(wgpu::MapMode::Read, |_| {});
-        gpu.device.poll(wgpu::PollType::wait_indefinitely())?;
-        let data = buf
-            .slice(..)
-            .get_mapped_range()
-            .map_err(|e| anyhow::anyhow!("mapping coverage buffer: {e}"))?;
-        let ids: &[u32] = bytemuck::cast_slice(&data);
+        let ids = self.read_owner(gpu)?;
         let (mut edge, mut edge_n, mut inner, mut inner_n) = (0u64, 0u64, 0u64, 0u64);
         for y in 0..h {
             for x in 0..w {
@@ -952,16 +942,160 @@ impl Sim {
     }
 }
 
+/// Copies the first `size` bytes of `src` to the CPU. Blocks on the GPU: for
+/// statistics only.
+fn read_back(gpu: &Gpu, src: &wgpu::Buffer, size: u64) -> anyhow::Result<Vec<u32>> {
+    let buf = gpu.device.create_buffer(&wgpu::BufferDescriptor {
+        label: Some("readback"),
+        size,
+        usage: wgpu::BufferUsages::COPY_DST | wgpu::BufferUsages::MAP_READ,
+        mapped_at_creation: false,
+    });
+    let mut encoder = gpu.device.create_command_encoder(&Default::default());
+    encoder.copy_buffer_to_buffer(src, 0, &buf, 0, size);
+    gpu.queue.submit([encoder.finish()]);
+    buf.slice(..).map_async(wgpu::MapMode::Read, |_| {});
+    gpu.device.poll(wgpu::PollType::wait_indefinitely())?;
+    let data = buf
+        .slice(..)
+        .get_mapped_range()
+        .map_err(|e| anyhow::anyhow!("mapping readback buffer: {e}"))?;
+    Ok(bytemuck::cast_slice(&data).to_vec())
+}
+
 // ---- per-output rendering -------------------------------------------------------
 
-pub(crate) struct OutputGfx {
+/// The compose pipeline for one output: draws the grains, the fade and the
+/// password dots into any render target of `format`.
+pub(crate) struct Compose {
     pub(crate) place: Place,
-    surface: wgpu::Surface<'static>,
-    config: wgpu::SurfaceConfiguration,
     srgb: bool,
     view_buf: wgpu::Buffer,
-    compose: wgpu::RenderPipeline,
-    compose_group: wgpu::BindGroup,
+    pipeline: wgpu::RenderPipeline,
+    group: wgpu::BindGroup,
+}
+
+impl Compose {
+    pub(crate) fn new(gpu: &Gpu, sim: &Sim, place: Place, format: wgpu::TextureFormat, blend: Option<wgpu::BlendState>) -> Self {
+        let device = &gpu.device;
+        let view_buf = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("view"),
+            size: size_of::<View>() as u64,
+            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let fs = wgpu::ShaderStages::FRAGMENT;
+        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("compose"),
+            entries: &[
+                entry(0, fs, uniform()),
+                entry(1, fs, storage(true)),
+                entry(2, fs, storage(true)),
+                entry(3, fs, texture(UNFILTERED)),
+            ],
+        });
+        let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("compose"),
+            layout: &layout,
+            entries: &[
+                wgpu::BindGroupEntry { binding: 0, resource: view_buf.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 1, resource: sim.outs_buf.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 2, resource: sim.owner.as_entire_binding() },
+                wgpu::BindGroupEntry { binding: 3, resource: wgpu::BindingResource::TextureView(&sim.shot) },
+            ],
+        });
+        // The module's group 0 belongs to the scatter pass; compose uses group 1.
+        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
+            label: Some("compose"),
+            bind_group_layouts: &[None, Some(&layout)],
+            immediate_size: 0,
+        });
+        let pipeline = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
+            label: Some("compose"),
+            layout: Some(&pipeline_layout),
+            vertex: wgpu::VertexState {
+                module: &sim.render_module,
+                entry_point: Some("compose_vs"),
+                compilation_options: Default::default(),
+                buffers: &[],
+            },
+            primitive: Default::default(),
+            depth_stencil: None,
+            multisample: Default::default(),
+            fragment: Some(wgpu::FragmentState {
+                module: &sim.render_module,
+                entry_point: Some("compose_fs"),
+                compilation_options: Default::default(),
+                targets: &[Some(wgpu::ColorTargetState {
+                    format,
+                    blend,
+                    write_mask: wgpu::ColorWrites::ALL,
+                })],
+            }),
+            multiview_mask: None,
+            cache: None,
+        });
+        Self { place, srgb: format.is_srgb(), view_buf, pipeline, group }
+    }
+
+    /// Draws one frame from the owner buffer (`Sim::rasterize` first) into
+    /// `target`. `dots` are (x, y, opacity) in canvas px.
+    #[allow(clippy::too_many_arguments)]
+    pub(crate) fn draw(
+        &self,
+        gpu: &Gpu,
+        sim: &Sim,
+        target: &wgpu::TextureView,
+        alpha: f32,
+        dots: &[[f32; 3]],
+        dot_radius: f32,
+    ) {
+        let mut view = View::zeroed();
+        view.origin = [self.place.origin[0] as f32, self.place.origin[1] as f32];
+        view.size = [self.place.size[0] as f32, self.place.size[1] as f32];
+        view.alpha = alpha;
+        view.srgb_surface = u32::from(self.srgb);
+        view.dot_radius = dot_radius;
+        view.n_outputs = sim.n_outputs;
+        [view.canvas_w, view.canvas_h] = sim.canvas;
+        let dots = &dots[..dots.len().min(MAX_DOTS)];
+        view.dot_count = dots.len() as u32;
+        for (slot, d) in view.dots.iter_mut().zip(dots) {
+            *slot = [d[0], d[1], d[2], 0.0];
+        }
+        gpu.queue.write_buffer(&self.view_buf, 0, bytemuck::bytes_of(&view));
+
+        let mut encoder = gpu.device.create_command_encoder(&Default::default());
+        {
+            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
+                label: Some("compose"),
+                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
+                    view: target,
+                    depth_slice: None,
+                    resolve_target: None,
+                    ops: wgpu::Operations {
+                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
+                        store: wgpu::StoreOp::Store,
+                    },
+                })],
+                depth_stencil_attachment: None,
+                timestamp_writes: None,
+                occlusion_query_set: None,
+                multiview_mask: None,
+            });
+            pass.set_pipeline(&self.pipeline);
+            pass.set_bind_group(1, &self.group, &[]);
+            pass.draw(0..3, 0..1);
+        }
+        gpu.queue.submit([encoder.finish()]);
+    }
+}
+
+/// An output's Wayland surface and its compose pipeline.
+pub(crate) struct OutputGfx {
+    surface: wgpu::Surface<'static>,
+    config: wgpu::SurfaceConfiguration,
+    compose: Compose,
 }
 
 impl OutputGfx {
@@ -1003,79 +1137,12 @@ impl OutputGfx {
         config.desired_maximum_frame_latency = 1;
         log::debug!("surface {format:?}, {:?}, {alpha_mode:?}", config.present_mode);
         surface.configure(device, &config);
-
-        let view_buf = device.create_buffer(&wgpu::BufferDescriptor {
-            label: Some("view"),
-            size: size_of::<View>() as u64,
-            usage: wgpu::BufferUsages::UNIFORM | wgpu::BufferUsages::COPY_DST,
-            mapped_at_creation: false,
-        });
-        let fs = wgpu::ShaderStages::FRAGMENT;
-        let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
-            label: Some("compose"),
-            entries: &[
-                entry(0, fs, uniform()),
-                entry(1, fs, storage(true)),
-                entry(2, fs, storage(true)),
-                entry(3, fs, texture(UNFILTERED)),
-            ],
-        });
-        let compose_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("compose"),
-            layout: &layout,
-            entries: &[
-                wgpu::BindGroupEntry { binding: 0, resource: view_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: sim.outs_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: sim.owner.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 3, resource: wgpu::BindingResource::TextureView(&sim.shot) },
-            ],
-        });
-        // The module's group 0 belongs to the scatter pass; compose uses group 1.
-        let pipeline_layout = device.create_pipeline_layout(&wgpu::PipelineLayoutDescriptor {
-            label: Some("compose"),
-            bind_group_layouts: &[None, Some(&layout)],
-            immediate_size: 0,
-        });
         let blend = (alpha_mode == wgpu::CompositeAlphaMode::PreMultiplied).then_some(wgpu::BlendState::REPLACE);
-        let compose = device.create_render_pipeline(&wgpu::RenderPipelineDescriptor {
-            label: Some("compose"),
-            layout: Some(&pipeline_layout),
-            vertex: wgpu::VertexState {
-                module: &sim.render_module,
-                entry_point: Some("compose_vs"),
-                compilation_options: Default::default(),
-                buffers: &[],
-            },
-            primitive: Default::default(),
-            depth_stencil: None,
-            multisample: Default::default(),
-            fragment: Some(wgpu::FragmentState {
-                module: &sim.render_module,
-                entry_point: Some("compose_fs"),
-                compilation_options: Default::default(),
-                targets: &[Some(wgpu::ColorTargetState {
-                    format,
-                    blend,
-                    write_mask: wgpu::ColorWrites::ALL,
-                })],
-            }),
-            multiview_mask: None,
-            cache: None,
-        });
-
-        Ok(Self {
-            place,
-            surface,
-            config,
-            srgb: format.is_srgb(),
-            view_buf,
-            compose,
-            compose_group,
-        })
+        let compose = Compose::new(gpu, sim, place, format, blend);
+        Ok(Self { surface, config, compose })
     }
 
-    /// Draws one frame from the owner buffer (`Sim::rasterize` first). `dots`
-    /// are (x, y, opacity) in canvas px.
+    /// Draws one frame (`Sim::rasterize` first) and presents it.
     pub(crate) fn render(&mut self, gpu: &Gpu, sim: &Sim, alpha: f32, dots: &[[f32; 3]], dot_radius: f32) {
         let frame = match self.surface.get_current_texture() {
             wgpu::CurrentSurfaceTexture::Success(f) | wgpu::CurrentSurfaceTexture::Suboptimal(f) => f,
@@ -1085,45 +1152,26 @@ impl OutputGfx {
             }
             _ => return,
         };
-        let mut view = View::zeroed();
-        view.origin = [self.place.origin[0] as f32, self.place.origin[1] as f32];
-        view.size = [self.place.size[0] as f32, self.place.size[1] as f32];
-        view.alpha = alpha;
-        view.srgb_surface = u32::from(self.srgb);
-        view.dot_radius = dot_radius;
-        view.n_outputs = sim.n_outputs;
-        [view.canvas_w, view.canvas_h] = sim.canvas;
-        let dots = &dots[..dots.len().min(MAX_DOTS)];
-        view.dot_count = dots.len() as u32;
-        for (slot, d) in view.dots.iter_mut().zip(dots) {
-            *slot = [d[0], d[1], d[2], 0.0];
-        }
-        gpu.queue.write_buffer(&self.view_buf, 0, bytemuck::bytes_of(&view));
-
         let target = frame.texture.create_view(&Default::default());
-        let mut encoder = gpu.device.create_command_encoder(&Default::default());
-        {
-            let mut pass = encoder.begin_render_pass(&wgpu::RenderPassDescriptor {
-                label: Some("compose"),
-                color_attachments: &[Some(wgpu::RenderPassColorAttachment {
-                    view: &target,
-                    depth_slice: None,
-                    resolve_target: None,
-                    ops: wgpu::Operations {
-                        load: wgpu::LoadOp::Clear(wgpu::Color::TRANSPARENT),
-                        store: wgpu::StoreOp::Store,
-                    },
-                })],
-                depth_stencil_attachment: None,
-                timestamp_writes: None,
-                occlusion_query_set: None,
-                multiview_mask: None,
-            });
-            pass.set_pipeline(&self.compose);
-            pass.set_bind_group(1, &self.compose_group, &[]);
-            pass.draw(0..3, 0..1);
-        }
-        gpu.queue.submit([encoder.finish()]);
+        self.compose.draw(gpu, sim, &target, alpha, dots, dot_radius);
         gpu.queue.present(frame);
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    /// Every shader module parses and validates, as `module` builds it.
+    #[test]
+    fn shaders_validate() {
+        for (name, body) in [("fluid", FLUID), ("grains", GRAINS), ("render", RENDER), ("attract", ATTRACT)] {
+            let source = format!("{COMMON}\n{body}");
+            let module = naga::front::wgsl::parse_str(&source)
+                .unwrap_or_else(|e| panic!("{name}: {}", e.emit_to_string(&source)));
+            naga::valid::Validator::new(naga::valid::ValidationFlags::all(), naga::valid::Capabilities::all())
+                .validate(&module)
+                .unwrap_or_else(|e| panic!("{name}: {}", e.emit_to_string(&source)));
+        }
     }
 }

@@ -6,6 +6,7 @@
 //! the same storm in a full-screen overlay without locking; Escape quits it.
 
 mod attract;
+mod bench;
 mod capture;
 mod config;
 mod daemon;
@@ -184,6 +185,7 @@ struct App {
 fn main() -> anyhow::Result<()> {
     env_logger::Builder::from_env(env_logger::Env::default().default_filter_or("info")).init();
     let (mut preview, mut daemonize) = (false, false);
+    let mut bench = bench::Options::default();
     let mut config_path = config::default_path();
     let mut args = std::env::args().skip(1);
     while let Some(arg) = args.next() {
@@ -191,7 +193,16 @@ fn main() -> anyhow::Result<()> {
             "--preview" => preview = true,
             "-f" | "--daemonize" => daemonize = true,
             "--config" => config_path = Some(args.next().context("--config needs a path")?.into()),
-            other => bail!("unknown argument {other:?} (usage: sandlock [-f] [--preview] [--config <file>])"),
+            "--bench" => {
+                let list = args.next().context("--bench needs a,b.png")?;
+                bench.images = list.split(',').map(Into::into).collect();
+            }
+            "--bench-secs" => bench.secs = args.next().context("--bench-secs needs seconds")?.parse()?,
+            "--bench-paced" => bench.paced = args.next().context("--bench-paced needs seconds")?.parse()?,
+            other => bail!(
+                "unknown argument {other:?} (usage: sandlock [-f] [--preview] [--config <file>] \
+                 [--bench a.png,b.png [--bench-secs N] [--bench-paced N]])"
+            ),
         }
     }
     // A broken config must not stop the lock: fall back to defaults.
@@ -202,6 +213,9 @@ fn main() -> anyhow::Result<()> {
             config::Config::default()
         }
     };
+    if !bench.images.is_empty() {
+        return bench::run(&config, &bench);
+    }
     let lock_mode = daemonize && !preview;
     let mut instance = match daemon::single_instance(lock_mode)? {
         daemon::Start::Run(instance) => instance,
@@ -304,24 +318,7 @@ fn main() -> anyhow::Result<()> {
             levels: img.as_ref().map_or([20.0, 60.0, 200.0], |i| attract::levels(&i.bgra)),
         })
         .collect();
-    let mut targets = Vec::new();
-    let mut clocks = Vec::new();
-    for a in &config.attractors {
-        match attract::load(a, &named, primary) {
-            Ok(attract::Loaded::Still(t)) => targets.push((t, a.emerge, a.reach)),
-            Ok(attract::Loaded::Clock(mut clock)) => match clock.update() {
-                Some(t) => {
-                    targets.push((t, a.emerge, a.reach));
-                    clocks.push(clock);
-                }
-                None => log::error!("clock: cannot read the local time"),
-            },
-            Err(e) => log::error!("attractor {}: {e:#}", a.describe()),
-        }
-    }
-    if !targets.is_empty() {
-        sim.set_targets(&gpu, &targets);
-    }
+    let mut clocks = attract::install(&config.attractors, &named, primary, &gpu, &mut sim);
     drop(images);
 
     let p = places[primary];

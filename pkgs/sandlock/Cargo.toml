@@ -23,6 +23,11 @@ wayland-protocols = { version = "0.32.13", features = ["client"] }
 wayland-protocols-wlr = { version = "0.3.12", features = ["client"] }
 wgpu = "30.0.1"
 
+[dev-dependencies]
+# Validates the WGSL shaders in `cargo test` (wgpu only reports shader errors
+# at runtime); the same naga wgpu builds on, so nothing new is compiled.
+naga = { version = "30.0.1", features = ["wgsl-in"] }
+
 [profile.release]
 lto = "thin"
 
