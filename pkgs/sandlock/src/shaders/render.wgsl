@@ -22,6 +22,12 @@ struct View {
 @group(0) @binding(0) var<uniform> P: Params;
 @group(0) @binding(1) var<storage, read> grains: array<vec4<f32>>;
 @group(0) @binding(2) var<storage, read_write> owner_rw: array<atomic<u32>>;
+@group(0) @binding(3) var<storage, read> bound: array<u32>;
+
+// Owner entries: grain id + 1, with the top bit set for grains bound to an
+// attractor so they win their pixel: the image stays on top of the storm.
+const BOUND: u32 = 0x80000000u;
+const ID_MASK: u32 = 0x7fffffffu;
 
 @compute @workgroup_size(256)
 fn scatter(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) nw: vec3<u32>) {
@@ -29,8 +35,10 @@ fn scatter(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroup
     if (i >= P.n_grains) { return; }
     let w = u32(P.canvas.x);
     let p = min(vec2<u32>(grains[i].xy), vec2<u32>(w, u32(P.canvas.y)) - 1u);
-    // Highest id wins: the same grain every frame, so nothing flickers.
-    atomicMax(&owner_rw[p.y * w + p.x], i + 1u);
+    // Highest key wins: bound grains first, then the same grain every frame,
+    // so nothing flickers.
+    let key = select(i + 1u, (i + 1u) | BOUND, bound[i] != 0u);
+    atomicMax(&owner_rw[p.y * w + p.x], key);
 }
 
 // ---- compose (per output) ----------------------------------------------------
@@ -46,7 +54,7 @@ const SEARCH: i32 = 4;
 
 fn owner_at(p: vec2<i32>) -> u32 {
     if (p.x < 0 || p.y < 0 || p.x >= i32(V.canvas_w) || p.y >= i32(V.canvas_h)) { return 0u; }
-    return owner[u32(p.y) * V.canvas_w + u32(p.x)];
+    return owner[u32(p.y) * V.canvas_w + u32(p.x)] & ID_MASK;
 }
 
 fn home_of(i: u32) -> vec2<i32> {

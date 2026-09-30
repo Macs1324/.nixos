@@ -5,6 +5,10 @@
 @group(0) @binding(1) var<storage, read_write> grains: array<vec4<f32>>;
 @group(0) @binding(2) var<storage, read> outs: array<OutRect>;
 @group(0) @binding(3) var psi: texture_2d<f32>;
+// Attractors (attract.wgsl): the target pixel each grain is bound to, and the
+// target image (rgb colour, a firmness; 0 = no target).
+@group(0) @binding(4) var<storage, read_write> bound: array<atomic<u32>>;
+@group(0) @binding(5) var targets: texture_2d<f32>;
 
 fn home_of(i: u32) -> vec2<f32> {
     for (var k = 0u; k < P.n_outputs; k++) {
@@ -101,6 +105,25 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
     // Midpoint (RK2): plain Euler spirals outwards and empties vortex cores.
     let v1 = vel_at(pos);
     v = vel_at(pos + v1 * dt * 0.5);
+    // A grain bound to a target keeps riding the flow, plus a spring towards
+    // its target: the image ripples with the storm, firmer with firmness.
+    let b = atomicLoad(&bound[i]);
+    if (b != 0u && !homing) {
+        let cw = u32(P.canvas.x);
+        let tp = vec2<u32>((b - 1u) % cw, (b - 1u) / cw);
+        let t = textureLoad(targets, tp, 0);
+        if (t.a == 0.0) {
+            atomicStore(&bound[i], 0u);
+        } else {
+            let firmness = (t.a * 255.0 - 1.0) / 254.0;
+            var pull = (vec2<f32>(tp) + 0.5 - pos) * mix(2.0, 20.0, firmness);
+            // Stream in instead of teleporting.
+            let cap = 700.0 * u;
+            let len = length(pull);
+            if (len > cap) { pull *= cap / len; }
+            v += pull;
+        }
+    }
     if (homing) {
         // Critically damped springs; the flow fades out as they take over.
         let k = 55.0;

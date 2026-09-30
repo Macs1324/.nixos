@@ -15,6 +15,9 @@ const COMMON: &str = include_str!("shaders/common.wgsl");
 const FLUID: &str = include_str!("shaders/fluid.wgsl");
 const GRAINS: &str = include_str!("shaders/grains.wgsl");
 const RENDER: &str = include_str!("shaders/render.wgsl");
+const ATTRACT: &str = include_str!("shaders/attract.wgsl");
+/// Dynamic-offset stride for per-attractor uniforms.
+const RECT_SLOT: u64 = 256;
 
 /// Fluid cells across the canvas height: the prototype's tuning assumes this.
 const GRID_ROWS: f32 = 61.0;
@@ -41,7 +44,7 @@ pub(crate) struct Params {
     pub(crate) n_outputs: u32,
     pub(crate) splat_count: u32,
     pub(crate) cell_x: f32,
-    _pad: u32,
+    pub(crate) seed: u32,
 }
 
 #[repr(C)]
@@ -300,6 +303,26 @@ pub(crate) struct Sim {
     scatter: Pass,
     render_module: wgpu::ShaderModule,
     pub(crate) canvas: [u32; 2],
+    targets_tex: wgpu::Texture,
+    /// Owned here; the passes reach them through their bind groups.
+    _claim: wgpu::Buffer,
+    _bound: wgpu::Buffer,
+    recruit: Pass,
+    rect_layout: wgpu::BindGroupLayout,
+    /// One recruit dispatch per attractor rectangle.
+    rects: Vec<[u32; 4]>,
+    rect_group: Option<wgpu::BindGroup>,
+}
+
+/// Per-attractor recruit settings (attract.wgsl `Rect`).
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
+struct RectUniform {
+    origin: [u32; 2],
+    size: [u32; 2],
+    emerge: f32,
+    reach: f32,
+    _pad: [u32; 2],
 }
 
 impl Sim {
@@ -416,7 +439,7 @@ impl Sim {
             n_outputs: places.len() as u32,
             splat_count: 0,
             cell_x,
-            _pad: 0,
+            seed: 0,
         };
         let params_buf = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("params"),
@@ -569,42 +592,63 @@ impl Sim {
             &[(0, Res::Params), (5, Res::View(&psi[0])), (7, Res::View(&psi[1]))],
         );
 
+        // Attractors: the target image (rgb colour, a firmness), and the
+        // claims between target pixels and grains (see attract.wgsl).
+        let targets_tex = device.create_texture(&wgpu::TextureDescriptor {
+            label: Some("targets"),
+            size: wgpu::Extent3d { width: canvas[0], height: canvas[1], depth_or_array_layers: 1 },
+            mip_level_count: 1,
+            sample_count: 1,
+            dimension: wgpu::TextureDimension::D2,
+            format: wgpu::TextureFormat::Rgba8Unorm,
+            usage: wgpu::TextureUsages::TEXTURE_BINDING | wgpu::TextureUsages::COPY_DST,
+            view_formats: &[],
+        });
+        let targets = targets_tex.create_view(&Default::default());
+        let claim = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("claim"),
+            size: u64::from(canvas[0]) * u64::from(canvas[1]) * 4,
+            usage: wgpu::BufferUsages::STORAGE,
+            mapped_at_creation: false,
+        });
+        let bound = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("bound"),
+            size: n_grains * 4,
+            usage: wgpu::BufferUsages::STORAGE,
+            mapped_at_creation: false,
+        });
+
+        let cs = wgpu::ShaderStages::COMPUTE;
+        let bind = |binding, resource| wgpu::BindGroupEntry { binding, resource };
+        let tv = wgpu::BindingResource::TextureView;
+
         let grains_module = module(device, "grains", GRAINS);
         let grains_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("grains"),
             entries: &[
-                entry(0, wgpu::ShaderStages::COMPUTE, uniform()),
-                entry(1, wgpu::ShaderStages::COMPUTE, storage(false)),
-                entry(2, wgpu::ShaderStages::COMPUTE, storage(true)),
-                entry(3, wgpu::ShaderStages::COMPUTE, texture(UNFILTERED)),
-            ],
-        });
-        let grains_group = device.create_bind_group(&wgpu::BindGroupDescriptor {
-            label: Some("grains"),
-            layout: &grains_layout,
-            entries: &[
-                wgpu::BindGroupEntry {
-                    binding: 0,
-                    resource: params_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 1,
-                    resource: grains.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 2,
-                    resource: outs_buf.as_entire_binding(),
-                },
-                wgpu::BindGroupEntry {
-                    binding: 3,
-                    // psi + turbulence (see `turbulence`).
-                    resource: wgpu::BindingResource::TextureView(&psi[1]),
-                },
+                entry(0, cs, uniform()),
+                entry(1, cs, storage(false)),
+                entry(2, cs, storage(true)),
+                entry(3, cs, texture(UNFILTERED)),
+                entry(4, cs, storage(false)),
+                entry(5, cs, texture(UNFILTERED)),
             ],
         });
         let grains_pass = Pass {
             pipeline: compute(device, &grains_module, "main", &[&grains_layout]),
-            group: grains_group,
+            group: device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("grains"),
+                layout: &grains_layout,
+                entries: &[
+                    bind(0, params_buf.as_entire_binding()),
+                    bind(1, grains.as_entire_binding()),
+                    bind(2, outs_buf.as_entire_binding()),
+                    // psi + turbulence (see `turbulence`).
+                    bind(3, tv(&psi[1])),
+                    bind(4, bound.as_entire_binding()),
+                    bind(5, tv(&targets)),
+                ],
+            }),
         };
         let groups = n_grains.div_ceil(256) as u32;
         let gx = groups.clamp(1, 65535);
@@ -620,9 +664,10 @@ impl Sim {
         let scatter_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("scatter"),
             entries: &[
-                entry(0, wgpu::ShaderStages::COMPUTE, uniform()),
-                entry(1, wgpu::ShaderStages::COMPUTE, storage(true)),
-                entry(2, wgpu::ShaderStages::COMPUTE, storage(false)),
+                entry(0, cs, uniform()),
+                entry(1, cs, storage(true)),
+                entry(2, cs, storage(false)),
+                entry(3, cs, storage(true)),
             ],
         });
         let scatter = Pass {
@@ -631,9 +676,52 @@ impl Sim {
                 label: Some("scatter"),
                 layout: &scatter_layout,
                 entries: &[
-                    wgpu::BindGroupEntry { binding: 0, resource: params_buf.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 1, resource: grains.as_entire_binding() },
-                    wgpu::BindGroupEntry { binding: 2, resource: owner.as_entire_binding() },
+                    bind(0, params_buf.as_entire_binding()),
+                    bind(1, grains.as_entire_binding()),
+                    bind(2, owner.as_entire_binding()),
+                    bind(3, bound.as_entire_binding()),
+                ],
+            }),
+        };
+
+        let attract_module = module(device, "attract", ATTRACT);
+        let recruit_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("recruit"),
+            entries: &[
+                entry(0, cs, uniform()),
+                entry(1, cs, texture(UNFILTERED)),
+                entry(2, cs, storage(false)),
+                entry(3, cs, storage(false)),
+                entry(4, cs, storage(true)),
+                entry(5, cs, texture(UNFILTERED)),
+                entry(6, cs, storage(true)),
+            ],
+        });
+        let rect_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("attractor rect"),
+            entries: &[entry(
+                0,
+                cs,
+                wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: true,
+                    min_binding_size: wgpu::BufferSize::new(size_of::<RectUniform>() as u64),
+                },
+            )],
+        });
+        let recruit = Pass {
+            pipeline: compute(device, &attract_module, "recruit", &[&recruit_layout, &rect_layout]),
+            group: device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("recruit"),
+                layout: &recruit_layout,
+                entries: &[
+                    bind(0, params_buf.as_entire_binding()),
+                    bind(1, tv(&targets)),
+                    bind(2, claim.as_entire_binding()),
+                    bind(3, bound.as_entire_binding()),
+                    bind(4, owner.as_entire_binding()),
+                    bind(5, tv(&shot)),
+                    bind(6, outs_buf.as_entire_binding()),
                 ],
             }),
         };
@@ -662,10 +750,68 @@ impl Sim {
             scatter,
             render_module,
             canvas,
+            targets_tex,
+            _claim: claim,
+            _bound: bound,
+            recruit,
+            rect_layout,
+            rects: Vec::new(),
+            rect_group: None,
         };
         // Place every grain at home before the first frame is drawn.
         sim.step(gpu, 0.0, &[]);
         Ok(sim)
+    }
+
+    /// Installs attractor targets: (target, emerge seconds, reach px). Later
+    /// targets overwrite earlier ones where they overlap.
+    pub(crate) fn set_targets(&mut self, gpu: &Gpu, targets: &[(crate::attract::Target, f32, f32)]) {
+        let mut slots = vec![0u8; targets.len().max(1) * RECT_SLOT as usize];
+        self.rects.clear();
+        for (k, (t, emerge, reach)) in targets.iter().enumerate() {
+            gpu.queue.write_texture(
+                wgpu::TexelCopyTextureInfo {
+                    texture: &self.targets_tex,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d { x: t.origin[0], y: t.origin[1], z: 0 },
+                    aspect: wgpu::TextureAspect::All,
+                },
+                &t.rgba,
+                wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(t.size[0] * 4),
+                    rows_per_image: Some(t.size[1]),
+                },
+                wgpu::Extent3d { width: t.size[0], height: t.size[1], depth_or_array_layers: 1 },
+            );
+            let rect = RectUniform {
+                origin: t.origin,
+                size: t.size,
+                emerge: *emerge,
+                reach: *reach * self.params.unit,
+                _pad: [0; 2],
+            };
+            slots[k * RECT_SLOT as usize..][..size_of::<RectUniform>()].copy_from_slice(bytemuck::bytes_of(&rect));
+            self.rects.push([t.origin[0], t.origin[1], t.size[0], t.size[1]]);
+        }
+        use wgpu::util::DeviceExt;
+        let buf = gpu.device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("attractor rects"),
+            contents: &slots,
+            usage: wgpu::BufferUsages::UNIFORM,
+        });
+        self.rect_group = Some(gpu.device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("attractor rects"),
+            layout: &self.rect_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    buffer: &buf,
+                    offset: 0,
+                    size: wgpu::BufferSize::new(size_of::<RectUniform>() as u64),
+                }),
+            }],
+        }));
     }
 
     /// Rebuilds the owner buffer from the current grain positions: one pass
@@ -737,6 +883,7 @@ impl Sim {
         }
         self.params.dt = dt;
         self.params.splat_count = splats.len() as u32;
+        self.params.seed = self.params.seed.wrapping_add(1);
         gpu.queue
             .write_buffer(&self.params_buf, 0, bytemuck::bytes_of(&self.params));
         gpu.queue
@@ -773,6 +920,14 @@ impl Sim {
             }
             // Always, so the first step (dt = 0) also fills what grains read.
             run(&self.turbulence);
+            if let Some(rect_group) = &self.rect_group {
+                cpass.set_pipeline(&self.recruit.pipeline);
+                cpass.set_bind_group(0, &self.recruit.group, &[]);
+                for (k, r) in self.rects.iter().enumerate() {
+                    cpass.set_bind_group(1, rect_group, &[(k as u64 * RECT_SLOT) as u32]);
+                    cpass.dispatch_workgroups(r[2].div_ceil(16), r[3].div_ceil(16), 1);
+                }
+            }
             cpass.set_pipeline(&self.grains_pass.pipeline);
             cpass.set_bind_group(0, &self.grains_pass.group, &[]);
             cpass.dispatch_workgroups(self.grain_groups[0], self.grain_groups[1], 1);

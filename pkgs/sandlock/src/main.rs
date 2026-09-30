@@ -5,6 +5,7 @@
 //! `sandlock` locks the session (ext-session-lock). `sandlock --preview` runs
 //! the same storm in a full-screen overlay without locking; Escape quits it.
 
+mod attract;
 mod capture;
 mod config;
 mod daemon;
@@ -265,11 +266,37 @@ fn main() -> anyhow::Result<()> {
     // GPU setup before locking, so the first locked frame is ready at once.
     let gpu = Gpu::new()?;
     let mut sim = Sim::new(&gpu, canvas, &places, &images)?;
-    drop(images);
 
     let primary = (0..places.len())
         .max_by_key(|&i| places[i].size[0] as u64 * places[i].size[1] as u64)
         .unwrap_or(0);
+    // Attractors: a broken image is logged and skipped, never fatal.
+    let named: Vec<_> = outputs
+        .iter()
+        .zip(&places)
+        .zip(&images)
+        .map(|((o, p), img)| attract::Screen {
+            name: o.info.name.clone(),
+            place: *p,
+            levels: img.as_ref().map_or([20.0, 60.0, 200.0], |i| attract::levels(&i.bgra)),
+        })
+        .collect();
+    let targets: Vec<_> = config
+        .attractors
+        .iter()
+        .filter_map(|a| match attract::load(a, &named, primary) {
+            Ok(t) => Some((t, a.emerge, a.reach)),
+            Err(e) => {
+                log::error!("attractor {}: {e:#}", a.image.display());
+                None
+            }
+        })
+        .collect();
+    if !targets.is_empty() {
+        sim.set_targets(&gpu, &targets);
+    }
+    drop(images);
+
     let p = places[primary];
     let seed = std::time::SystemTime::now()
         .duration_since(std::time::UNIX_EPOCH)

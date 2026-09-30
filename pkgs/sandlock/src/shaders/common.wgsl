@@ -17,7 +17,7 @@ struct Params {
     n_outputs: u32,
     splat_count: u32,
     cell_x: f32,         // horizontally: the grid ends exactly at the canvas edge
-    _pad1: u32,
+    seed: u32,           // changes every step: per-step randomness
 }
 
 // One output's rectangle in the canvas and its first grain. Grains are laid
