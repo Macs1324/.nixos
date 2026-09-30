@@ -48,7 +48,18 @@ in {
 
   # Enable touchpad support (enabled default in most desktopManager).
   services.libinput.enable = true;
-  programs.thunar.enable = true;
+  programs.thunar = {
+    enable = true;
+    plugins = with pkgs; [
+      thunar-archive-plugin # "Extract here" / "Create archive" (via xarchiver)
+      thunar-volman # auto-mount USB drives and phones
+      thunar-media-tags-plugin
+    ];
+  };
+  # Trash, mounting and network locations in Thunar's sidebar.
+  services.gvfs.enable = true;
+  # Thumbnails for images, PDFs and (with ffmpegthumbnailer) videos.
+  services.tumbler.enable = true;
 
   programs.firejail.enable = true;
   programs.hyprland = {
@@ -91,5 +102,7 @@ in {
     sddmTheme
     inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default
     pkgs.xwayland-satellite
+    pkgs.xarchiver
+    pkgs.ffmpegthumbnailer
   ];
 }

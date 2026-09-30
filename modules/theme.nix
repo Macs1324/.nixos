@@ -33,6 +33,15 @@ in {
       sizes.terminal = 14;
     };
 
+    # Without an icon theme GTK apps (Thunar especially) fall back to
+    # hicolor and show blank or generic icons.
+    icons = {
+      enable = true;
+      package = pkgs.papirus-icon-theme;
+      dark = "Papirus-Dark";
+      light = "Papirus-Light";
+    };
+
     cursor = {
       name = "Bibata-Modern-Ice";
       package = pkgs.bibata-cursors;
