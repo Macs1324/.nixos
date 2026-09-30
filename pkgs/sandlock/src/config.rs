@@ -122,6 +122,10 @@ pub(crate) struct Storm {
     /// desktop reassembles and then erodes again, so the storm never mixes
     /// into one soup. 0 = off.
     pub(crate) tide: f32,
+    /// How fast grains spread from crowded areas into thinned-out ones
+    /// (1/s), so pulls like tides and attractors leave no empty patches.
+    /// 0 = off.
+    pub(crate) density: f32,
 }
 
 impl Default for Storm {
@@ -134,6 +138,7 @@ impl Default for Storm {
             eruption: 1.0,
             mouse: 1.0,
             tide: 20.0,
+            density: 4.0,
         }
     }
 }
@@ -162,6 +167,7 @@ pub(crate) fn load(path: &Path) -> anyhow::Result<Config> {
         ("eruption", config.storm.eruption),
         ("mouse", config.storm.mouse),
         ("tide", config.storm.tide),
+        ("density", config.storm.density),
     ] {
         anyhow::ensure!(
             value.is_finite() && value >= 0.0,

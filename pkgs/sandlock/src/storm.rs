@@ -327,6 +327,7 @@ impl Storm {
         // Wind strength, wind feature size (~1/3 screen height), fine turbulence.
         let wind = if storming { WIND * t.intensity * (1.0 + 0.8 * self.entropy) } else { 0.0 };
         params.tide = self.tide(t.tide, storming);
+        params.density = if storming { t.density } else { 0.0 };
         params.forcing = [wind, 20.0, 55.0 * t.swirl, if std::mem::take(&mut self.shatter) { 1.0 } else { 0.0 }];
         splats
     }

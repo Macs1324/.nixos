@@ -22,6 +22,9 @@ const RECT_SLOT: u64 = 256;
 /// Fluid cells across the canvas height: the prototype's tuning assumes this.
 const GRID_ROWS: f32 = 61.0;
 const SOLVER_ITERS: usize = 40; // even: results land back in slot 0; warm-started
+/// Jacobi steps for the density correction (even; warm-started, and density
+/// changes slowly, so fewer are needed).
+const DENSITY_ITERS: usize = 16;
 const MAX_SPLATS: usize = 32;
 const MAX_DOTS: usize = 64;
 
@@ -47,6 +50,9 @@ pub(crate) struct Params {
     pub(crate) seed: u32,
     /// Tide: band centre (px), half width (px, 0 = off), strength, unused.
     pub(crate) tide: [f32; 4],
+    /// Density correction rate (1/s, 0 = off).
+    pub(crate) density: f32,
+    pub(crate) _pad: [u32; 3],
 }
 
 #[repr(C)]
@@ -283,6 +289,7 @@ fn fluid_binding(binding: u32) -> wgpu::BindingType {
         3 => texture(wgpu::TextureSampleType::Float { filterable: true }),
         4 => storage_texture(wgpu::TextureFormat::Rgba16Float),
         5 | 6 => texture(UNFILTERED),
+        8 => storage(true),
         _ => storage_texture(wgpu::TextureFormat::R32Float),
     }
 }
@@ -385,6 +392,9 @@ pub(crate) struct Sim {
     /// One recruit dispatch per attractor rectangle.
     rects: Vec<[u32; 4]>,
     rect_group: Option<wgpu::BindGroup>,
+    counts: wgpu::Buffer,
+    dsource: Pass,
+    phi: [Pass; 2],
 }
 
 /// Per-attractor recruit settings (attract.wgsl `Rect`).
@@ -538,6 +548,8 @@ impl Sim {
             cell_x,
             seed: 0,
             tide: [0.0; 4],
+            density: 0.0,
+            _pad: [0; 3],
         };
         let params_buf = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("params"),
@@ -571,11 +583,21 @@ impl Sim {
         });
 
         let fluid = module(device, "fluid", FLUID);
+        // Density correction: grains per cell, its source, and the potential.
+        let counts = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("counts"),
+            size: u64::from(grid[0]) * u64::from(grid[1]) * 4,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let dsrc = scalar();
+        let phi = [scalar(), scalar()];
         enum Res<'a> {
             Params,
             Splats,
             Sampler,
             View(&'a wgpu::TextureView),
+            Buffer(&'a wgpu::Buffer),
         }
         let pass = |name: &str, slots: &[(u32, Res)]| -> Pass {
             let entries: Vec<_> = slots
@@ -595,6 +617,7 @@ impl Sim {
                         Res::Splats => splats_buf.as_entire_binding(),
                         Res::Sampler => wgpu::BindingResource::Sampler(&sampler),
                         Res::View(v) => wgpu::BindingResource::TextureView(v),
+                        Res::Buffer(b) => b.as_entire_binding(),
                     },
                 })
                 .collect();
@@ -689,6 +712,12 @@ impl Sim {
             "turbulence",
             &[(0, Res::Params), (5, Res::View(&psi[0])), (7, Res::View(&psi[1]))],
         );
+        let dsource = pass("dsource", &[(0, Res::Params), (8, Res::Buffer(&counts)), (7, Res::View(&dsrc))]);
+        // The pressure pass solves laplacian(phi) = source just the same.
+        let phi_pass = [
+            pass("pressure", &[(5, Res::View(&phi[0])), (6, Res::View(&dsrc)), (7, Res::View(&phi[1]))]),
+            pass("pressure", &[(5, Res::View(&phi[1])), (6, Res::View(&dsrc)), (7, Res::View(&phi[0]))]),
+        ];
         // Attractors: the target image (rgb colour, a firmness), and the
         // claims between target pixels and grains (see attract.wgsl).
         let targets_tex = device.create_texture(&wgpu::TextureDescriptor {
@@ -729,6 +758,8 @@ impl Sim {
                 entry(3, cs, texture(UNFILTERED)),
                 entry(4, cs, storage(false)),
                 entry(5, cs, texture(UNFILTERED)),
+                entry(6, cs, texture(UNFILTERED)),
+                entry(7, cs, storage(false)),
             ],
         });
         let grains_pass = Pass {
@@ -744,6 +775,8 @@ impl Sim {
                     bind(3, tv(&psi[1])),
                     bind(4, bound.as_entire_binding()),
                     bind(5, tv(&targets)),
+                    bind(6, tv(&phi[0])),
+                    bind(7, counts.as_entire_binding()),
                 ],
             }),
         };
@@ -886,6 +919,9 @@ impl Sim {
             rect_layout,
             rects: Vec::new(),
             rect_group: None,
+            counts,
+            dsource,
+            phi: phi_pass,
         };
         // Place every grain at home before the first frame is drawn.
         sim.step(gpu, 0.0, &[]);
@@ -1058,9 +1094,25 @@ impl Sim {
                 for i in 0..SOLVER_ITERS {
                     run(&self.stream[i % 2]);
                 }
+                if self.params.density > 0.0 {
+                    // From the grains the previous step counted.
+                    run(&self.dsource);
+                    for i in 0..DENSITY_ITERS {
+                        run(&self.phi[i % 2]);
+                    }
+                }
             }
+        }
+        // Counted afresh by this step's grains pass.
+        encoder.clear_buffer(&self.counts, 0, None);
+        {
+            let mut cpass = encoder.begin_compute_pass(&Default::default());
+            let gx = self.grid[0].div_ceil(16);
+            let gy = self.grid[1].div_ceil(16);
+            cpass.set_pipeline(&self.turbulence.pipeline);
+            cpass.set_bind_group(0, &self.turbulence.group, &[]);
             // Always, so the first step (dt = 0) also fills what grains read.
-            run(&self.turbulence);
+            cpass.dispatch_workgroups(gx, gy, 1);
             if let Some(rect_group) = &self.rect_group {
                 cpass.set_pipeline(&self.recruit.pipeline);
                 cpass.set_bind_group(0, &self.recruit.group, &[]);

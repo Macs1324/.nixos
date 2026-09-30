@@ -15,6 +15,8 @@ struct Splats {
 @group(0) @binding(5) var scal_in: texture_2d<f32>;
 @group(0) @binding(6) var scal_aux: texture_2d<f32>;
 @group(0) @binding(7) var scal_out: texture_storage_2d<r32float, write>;
+// Grains per cell, counted by the grains pass (grains.wgsl `count`).
+@group(0) @binding(8) var<storage, read> counts: array<u32>;
 
 fn grid() -> vec2<u32> {
     return textureDimensions(vel_in);
@@ -146,6 +148,22 @@ fn pressure(@builtin(global_invocation_id) id: vec3<u32>) {
     let s = scal(p - vec2<i32>(1, 0)) + scal(p + vec2<i32>(1, 0)) + scal(p - vec2<i32>(0, 1)) + scal(p + vec2<i32>(0, 1));
     let d = textureLoad(scal_aux, p, 0).x;
     textureStore(scal_out, id.xy, vec4<f32>((s - d) * 0.25, 0.0, 0.0, 0.0));
+}
+
+// Density correction: the canvas holds one grain per pixel on average (the
+// offscreen canvas has grains too), so a cell with more grains than pixels is
+// crowded and one with fewer has thinned out, e.g. where tides or attractors
+// pulled grains away. Its excess is the source of a correction potential
+// (laplacian(phi) = source, solved by `pressure`) whose gradient the grains
+// follow (grains.wgsl `drift_at`): out of crowded cells into thin ones. The
+// flow alone never refills an empty region: it only moves it around.
+@compute @workgroup_size(16, 16)
+fn dsource(@builtin(global_invocation_id) id: vec3<u32>) {
+    let size = textureDimensions(scal_out);
+    if (id.x >= size.x || id.y >= size.y) { return; }
+    let density = f32(counts[id.y * size.x + id.x]) / (P.cell_x * P.cell);
+    let s = P.density * (density - 1.0) * (1.0 - P.homing);
+    textureStore(scal_out, id.xy, vec4<f32>(s, 0.0, 0.0, 0.0));
 }
 
 // Subtract the pressure gradient: the velocity becomes (nearly) incompressible.

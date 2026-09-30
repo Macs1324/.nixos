@@ -9,6 +9,10 @@
 // target image (rgb colour, a firmness; 0 = no target).
 @group(0) @binding(4) var<storage, read_write> bound: array<atomic<u32>>;
 @group(0) @binding(5) var targets: texture_2d<f32>;
+// Density correction potential (fluid.wgsl `dsource`), and the grain count
+// per fluid cell it is computed from (for the next step).
+@group(0) @binding(6) var phi: texture_2d<f32>;
+@group(0) @binding(7) var<storage, read_write> counts: array<atomic<u32>>;
 
 
 fn home_of(i: u32) -> vec2<f32> {
@@ -67,6 +71,38 @@ fn vel_at(pos: vec2<f32>) -> vec2<f32> {
     return vec2<f32>(py * cell.x, -px * cell.y);
 }
 
+// grad(phi) at `pos` in px/s: central differences per cell (clamped at the
+// walls, so nothing is pushed through them), bilinearly interpolated.
+fn phi_at(c: vec2<i32>, size: vec2<i32>) -> f32 {
+    return textureLoad(phi, clamp(c, vec2<i32>(0), size - 1), 0).x;
+}
+
+fn drift_at(pos: vec2<f32>) -> vec2<f32> {
+    let size = vec2<i32>(textureDimensions(phi));
+    let cell = vec2<f32>(P.cell_x, P.cell);
+    let x = pos / cell - 0.5;
+    let i = vec2<i32>(floor(x));
+    let f = x - floor(x);
+    var g = vec2<f32>(0.0);
+    for (var b = 0; b < 2; b++) {
+        for (var a = 0; a < 2; a++) {
+            let c = i + vec2<i32>(a, b);
+            let d = 0.5 * vec2<f32>(phi_at(c + vec2<i32>(1, 0), size) - phi_at(c - vec2<i32>(1, 0), size),
+                                    phi_at(c + vec2<i32>(0, 1), size) - phi_at(c - vec2<i32>(0, 1), size));
+            g += d * select(1.0 - f.x, f.x, a == 1) * select(1.0 - f.y, f.y, b == 1);
+        }
+    }
+    return g * cell;
+}
+
+fn count(pos: vec2<f32>) {
+    if (P.density <= 0.0) { return; }
+    let cell = vec2<f32>(P.cell_x, P.cell);
+    let size = vec2<u32>(textureDimensions(phi));
+    let c = min(vec2<u32>(pos / cell), size - 1u);
+    atomicAdd(&counts[c.y * size.x + c.x], 1u);
+}
+
 // Per-grain randomness from its index (PCG): cheaper than hashing positions.
 fn ihash(i: u32, salt: u32) -> f32 {
     var x = i * 747796405u + 2891336453u + salt * 2654435769u;
@@ -99,6 +135,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
         let release = P.release_start + P.release_dur * (0.1 + 0.9 * n) + 0.15 * ihash(i, 1u);
         if (P.time < release) {
             grains[i] = vec4<f32>(h, 0.0, 0.0);
+            count(h);
             return;
         }
     }
@@ -107,6 +144,9 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
     // Midpoint (RK2): plain Euler spirals outwards and empties vortex cores.
     let v1 = vel_at(pos);
     v = vel_at(pos + v1 * dt * 0.5);
+    if (P.density > 0.0 && !homing) {
+        v += drift_at(pos);
+    }
     // A grain bound to a target keeps riding the flow, plus a spring towards
     // its target: the image ripples with the storm, firmer with firmness.
     var b = atomicLoad(&bound[i]);
@@ -167,5 +207,6 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
         v = vec2<f32>(0.0);
     }
     grains[i] = vec4<f32>(pos, v);
+    count(pos);
 
 }

@@ -19,6 +19,10 @@ struct Params {
     cell_x: f32,         // horizontally: the grid ends exactly at the canvas edge
     seed: u32,           // changes every step: per-step randomness
     tide: vec4<f32>,     // tide: x band centre px, y half width px (0 = off), z strength
+    density: f32,        // density correction rate (1/s, 0 = off)
+    _pad0: u32,
+    _pad1: u32,
+    _pad2: u32,
 }
 
 // One output's rectangle in the canvas and its first grain. Grains are laid
