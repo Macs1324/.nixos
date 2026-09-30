@@ -51,6 +51,26 @@ pub(crate) struct Attractor {
     /// How target colours are matched against the desktop's grains.
     #[serde(default)]
     pub(crate) tone: Tone,
+    /// Colour of a widget's pixels ("#rrggbb"; default white): the colour
+    /// its grains are matched against. Images use their own colours.
+    #[serde(default)]
+    pub(crate) color: Option<Rgb>,
+}
+
+/// An sRGB colour, written "#rrggbb" (the "#" is optional).
+#[derive(Debug, Clone, Copy, PartialEq)]
+pub(crate) struct Rgb(pub(crate) [u8; 3]);
+
+impl<'de> Deserialize<'de> for Rgb {
+    fn deserialize<D: serde::Deserializer<'de>>(d: D) -> Result<Self, D::Error> {
+        let s = String::deserialize(d)?;
+        let hex = s.strip_prefix('#').unwrap_or(&s);
+        let channel = |i: usize| hex.get(i..i + 2).and_then(|c| u8::from_str_radix(c, 16).ok());
+        match (hex.len(), channel(0), channel(2), channel(4)) {
+            (6, Some(r), Some(g), Some(b)) => Ok(Rgb([r, g, b])),
+            _ => Err(serde::de::Error::custom(format!("{s:?} is not a \"#rrggbb\" colour"))),
+        }
+    }
 }
 
 /// A clock attractor: the local time in seven-segment digits. Only the digits
@@ -233,6 +253,17 @@ mod tests {
         let clock = c.attractors[0].clock.unwrap();
         assert!(clock.seconds && !clock.twelve_hour);
         assert!(c.attractors[0].image.is_none());
+    }
+
+    #[test]
+    fn widget_colours() {
+        let c: Config = toml::from_str("[[attractor]]\nclock = {}\ncolor = \"#83a598\"\n").unwrap();
+        assert_eq!(c.attractors[0].color, Some(Rgb([0x83, 0xa5, 0x98])));
+        let c: Config = toml::from_str("[[attractor]]\nclock = {}\ncolor = \"FFffFF\"\n").unwrap();
+        assert_eq!(c.attractors[0].color, Some(Rgb([255, 255, 255])));
+        for bad in ["#83a59", "#83a5980", "#zzzzzz", "blue"] {
+            assert!(toml::from_str::<Config>(&format!("[[attractor]]\nclock = {{}}\ncolor = {bad:?}\n")).is_err(), "{bad}");
+        }
     }
 
     #[test]

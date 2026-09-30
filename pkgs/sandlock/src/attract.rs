@@ -398,8 +398,8 @@ fn glyph_covers(c: char, p: [f32; 2]) -> bool {
     })
 }
 
-/// Renders `text` into a `size` rectangle as straight-alpha RGBA (white ink).
-fn render_text(text: &str, size: [u32; 2]) -> Vec<u8> {
+/// Renders `text` into a `size` rectangle as straight-alpha RGBA in `ink`.
+fn render_text(text: &str, size: [u32; 2], ink: [u8; 3]) -> Vec<u8> {
     let [w, h] = size;
     let unit = h as f32;
     // Centred horizontally if the box is wider than the text.
@@ -418,7 +418,7 @@ fn render_text(text: &str, size: [u32; 2]) -> Vec<u8> {
             let inked = starts.iter().any(|&(c, start)| glyph_covers(c, [x - start, y]));
             if inked {
                 let o = ((py * w + px) * 4) as usize;
-                out[o..o + 4].copy_from_slice(&[255, 255, 255, 255]);
+                out[o..o + 4].copy_from_slice(&[ink[0], ink[1], ink[2], 255]);
             }
         }
     }
@@ -461,7 +461,8 @@ impl Clock {
         if self.shown.as_deref() == Some(text.as_str()) {
             return None;
         }
-        let rgba = finish(&self.attractor, render_text(&text, self.size), self.levels);
+        let ink = self.attractor.color.map_or([255; 3], |c| c.0);
+        let rgba = finish(&self.attractor, render_text(&text, self.size, ink), self.levels);
         self.shown = Some(text);
         Some(Target { origin: self.origin, size: self.size, rgba })
     }
@@ -486,7 +487,7 @@ mod tests {
 
     fn ink(text: &str) -> usize {
         let size = [(text_width(text) * 100.0).ceil() as u32, 100];
-        render_text(text, size).as_chunks::<4>().0.iter().filter(|p| p[3] == 255).count()
+        render_text(text, size, [255; 3]).as_chunks::<4>().0.iter().filter(|p| p[3] == 255).count()
     }
 
     #[test]
@@ -505,7 +506,7 @@ mod tests {
     fn segments_stay_apart() {
         // The gap between segments leaves the corners of an 8 empty.
         let size = [(DIGIT_W * 100.0).ceil() as u32, 100];
-        let px = render_text("8", size);
+        let px = render_text("8", size, [255; 3]);
         let at = |x: u32, y: u32| px[((y * size[0] + x) * 4 + 3) as usize];
         assert_eq!(at(size[0] / 2, 5), 255, "top segment");
         assert_eq!(at(5, 5), 0, "top-left corner");

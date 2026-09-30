@@ -36,10 +36,13 @@ in {
 
   config = {
     # The time emerges from the storm below the centre of the largest output
-    # (hosts add their own attractors to this list).
+    # (hosts add their own attractors to this list), in the palette's primary
+    # accent (Noctalia's `mPrimary`): what stands out most against the
+    # palette's surfaces, which is most of what is on screen.
     programs.sandlock.settings.attractor = [
       {
         clock = {};
+        color = config.lib.stylix.colors.withHashtag.base0D;
         position = [0.5 0.72];
         scale = 2.4;
       }
