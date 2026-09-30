@@ -11,6 +11,7 @@
     ./hyprland.nix
     ./niri.nix
     ./wlogout.nix
+    ./sandlock.nix
     ./secrets.nix
     ./nvim
     ./ai.nix

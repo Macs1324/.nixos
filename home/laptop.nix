@@ -1,11 +1,12 @@
-{...}: {
-  # Noctalia already locks on lid close and `systemctl suspend`
-  # (lockscreen.lock_before_suspend defaults to true); its idle behaviours ship
-  # disabled, so an unattended laptop would otherwise stay unlocked and lit.
+{config, ...}: {
+  # Lid close and `systemctl suspend` lock through sandlock's before-sleep hook
+  # (home/sandlock.nix). Noctalia's idle behaviours ship disabled, so an
+  # unattended laptop would otherwise stay unlocked and lit.
   programs.noctalia.settings.idle.behavior = {
     lock = {
       timeout = 300;
-      action = "lock";
+      action = "command";
+      command = config.programs.sandlock.lockCommand;
     };
     screen-off = {
       timeout = 330;
@@ -15,7 +16,8 @@
     suspend = {
       timeout = 900;
       action = "command";
-      command = "grep -qx 0 /sys/class/power_supply/A*/online && noctalia msg session lock-and-suspend";
+      # The before-sleep hook locks first.
+      command = "grep -qx 0 /sys/class/power_supply/A*/online && systemctl suspend";
     };
   };
 

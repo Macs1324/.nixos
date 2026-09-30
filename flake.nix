@@ -92,6 +92,7 @@
           touch $out
         '';
     };
+    sandlock = pkgs.callPackage ./pkgs/sandlock/package.nix {};
   in {
     nixosConfigurations = lib.genAttrs readyHosts (host:
       lib.nixosSystem {
@@ -124,7 +125,14 @@
       });
 
     # Exposed as packages so `nix build .#monitor-model` resolves the system itself.
-    packages.${system} = tests;
+    packages.${system} = tests // {inherit sandlock;};
+
+    # `nix develop .#sandlock` for iterating on the lock screen with cargo.
+    devShells.${system}.sandlock = pkgs.mkShell {
+      inputsFrom = [sandlock];
+      packages = with pkgs; [cargo rustc clippy rustfmt rust-analyzer];
+      LD_LIBRARY_PATH = lib.makeLibraryPath (with pkgs; [vulkan-loader libGL wayland libxkbcommon]);
+    };
 
     # Flake checking normally ignores custom homeConfigurations outputs.
     checks.${system} =
