@@ -48,6 +48,29 @@
     };
   };
 
+  programs.starship.enable = true;
+  programs.zoxide.enable = true;
+  programs.fzf = {
+    enable = true;
+    # Atuin owns Ctrl-R; fzf keeps Ctrl-T and Alt-C.
+    historyWidget.command = "";
+  };
+  programs.eza = {
+    enable = true;
+    icons = "auto";
+    git = true;
+  };
+  programs.atuin = {
+    enable = true;
+    # Ctrl-R opens Atuin; the up arrow keeps plain zsh history stepping.
+    flags = ["--disable-up-arrow"];
+  };
+  programs.yazi = {
+    enable = true;
+    # `y` opens yazi and cds to where you quit it (the new upstream default).
+    shellWrapperName = "y";
+  };
+
   programs.zsh = {
     enable = true;
     enableCompletion = true;
@@ -60,7 +83,7 @@
     '';
     oh-my-zsh = {
       enable = true;
-      theme = "robbyrussell";
+      # No theme: Starship draws the prompt.
       plugins = [
         "git"
         "npm"

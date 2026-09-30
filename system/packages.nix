@@ -58,7 +58,6 @@
     prettier
     ripgrep
     fd
-    zsh-powerlevel10k
     shellcheck
     bacon
     ffmpeg
