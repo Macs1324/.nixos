@@ -93,17 +93,25 @@
       ];
     };
 
-    # Store housekeeping: prune old generations weekly and deduplicate the store.
-    gc = {
-      automatic = true;
-      dates = "weekly";
-      options = "--delete-older-than 14d";
-    };
+    # Deduplicate the store; generation pruning is `programs.nh.clean` below.
     optimise.automatic = true;
 
     # `nix shell nixpkgs#foo` and legacy `<nixpkgs>` resolve to this flake's pinned nixpkgs.
     registry.nixpkgs.flake = inputs.nixpkgs;
     nixPath = ["nixpkgs=flake:nixpkgs"];
   };
+
+  # Weekly prune of old generations, always keeping at least as many as the
+  # grub configurationLimit above. nh.clean and nix.gc cannot both be enabled.
+  programs.nh = {
+    enable = true;
+    flake = "/home/macs/.nixos";
+    clean = {
+      enable = true;
+      dates = "weekly";
+      extraArgs = "--keep-since 14d --keep 5";
+    };
+  };
+
   system.stateVersion = "24.05";
 }

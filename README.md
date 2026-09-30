@@ -97,15 +97,16 @@ just clean        # full garbage collection now
 still two activations: if the home step fails, the new system is already live.
 Fix the issue and run `just home`.
 
+Activation goes through `nh`, which shows a build tree and a package diff.
 Direct equivalents, if you need them:
 
 ```sh
-sudo nixos-rebuild switch --flake .#workdesktop
-home-manager switch -b hm-backup --flake '.#macs@workdesktop'
+nh os switch . --hostname workdesktop
+nh home switch . --configuration macs@workdesktop --backup-extension hm-backup
 ```
 
-The system garbage-collects weekly (generations older than 14 days) and
-deduplicates the store. `nix shell nixpkgs#foo` and `<nixpkgs>` resolve to the
+`nh clean` runs weekly (keeping generations from the last 14 days, and at least
+5) and the store is deduplicated. `nix shell nixpkgs#foo` and `<nixpkgs>` resolve to the
 flake's pinned revision.
 
 ## Customizing

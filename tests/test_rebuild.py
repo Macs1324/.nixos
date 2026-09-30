@@ -37,7 +37,7 @@ fi
 if [[ "$name" == "${TEST_FAIL:-}" ]]; then exit 1; fi
 ''')
         mock.chmod(0o755)
-        for name in ["nix", "sudo", "nixos-rebuild", "home-manager", "hostname"]:
+        for name in ["nix", "nh", "hostname"]:
             (self.directory / name).symlink_to(mock)
         self.env = {
             **os.environ,
@@ -62,8 +62,8 @@ if [[ "$name" == "${TEST_FAIL:-}" ]]; then exit 1; fi
         self.assertEqual(result.returncode, 0, result.stderr)
         self.assertEqual(commands, [
             "nix<build><--no-link><.#nixosConfigurations.workdesktop.config.system.build.toplevel><.#homeConfigurations.macs@workdesktop.activationPackage>",
-            "sudo<nixos-rebuild><switch><--flake><.#workdesktop>",
-            "home-manager<switch><-b><hm-backup><--flake><.#macs@workdesktop>",
+            "nh<os><switch><.><--hostname><workdesktop>",
+            "nh<home><switch><.><--configuration><macs@workdesktop><--backup-extension><hm-backup>",
         ])
 
     def test_failed_build_never_activates(self):
@@ -73,10 +73,10 @@ if [[ "$name" == "${TEST_FAIL:-}" ]]; then exit 1; fi
         self.assertTrue(commands[0].startswith("nix<build>"))
 
     def test_failed_system_activation_stops_before_home(self):
-        result, commands = self.run_script("switch", "workdesktop", fail="sudo")
+        result, commands = self.run_script("switch", "workdesktop", fail="nh")
         self.assertNotEqual(result.returncode, 0)
         self.assertEqual(len(commands), 2)
-        self.assertFalse(any(command.startswith("home-manager") for command in commands))
+        self.assertFalse(any(command.startswith("nh<home>") for command in commands))
 
     def test_build_does_not_activate_and_defaults_to_hostname(self):
         result, commands = self.run_script("build")
@@ -88,7 +88,14 @@ if [[ "$name" == "${TEST_FAIL:-}" ]]; then exit 1; fi
     def test_home_only_does_not_require_system_build(self):
         result, commands = self.run_script("home", "homedesktop")
         self.assertEqual(result.returncode, 0, result.stderr)
-        self.assertEqual(commands, ["home-manager<switch><-b><hm-backup><--flake><.#macs@homedesktop>"])
+        self.assertEqual(commands, ["nh<home><switch><.><--configuration><macs@homedesktop><--backup-extension><hm-backup>"])
+
+    def test_missing_nh_runs_it_from_nixpkgs(self):
+        # The flake check sandbox has no nh on PATH, only the mock removed here.
+        (self.directory / "nh").unlink()
+        result, commands = self.run_script("home", "homedesktop")
+        self.assertEqual(result.returncode, 0, result.stderr)
+        self.assertEqual(commands, ["nix<run><nixpkgs#nh><--><home><switch><.><--configuration><macs@homedesktop><--backup-extension><hm-backup>"])
 
     def test_unknown_host_is_rejected_before_running_commands(self):
         result, commands = self.run_script("switch", "nixmacs")
@@ -124,8 +131,8 @@ if [[ "$name" == "${TEST_FAIL:-}" ]]; then exit 1; fi
         commands = self.log.read_text().splitlines()
         self.assertEqual(len(commands), 3)
         self.assertIn("nixosConfigurations.homedesktop", commands[0])
-        self.assertEqual(commands[1], "sudo<nixos-rebuild><switch><--flake><.#homedesktop>")
-        self.assertEqual(commands[2], "home-manager<switch><-b><hm-backup><--flake><.#macs@homedesktop>")
+        self.assertEqual(commands[1], "nh<os><switch><.><--hostname><homedesktop>")
+        self.assertEqual(commands[2], "nh<home><switch><.><--configuration><macs@homedesktop><--backup-extension><hm-backup>")
 
     def test_missing_hardware_file_stops_before_building(self):
         (self.repo / "hosts/worklaptop/hardware-configuration.nix").unlink()
