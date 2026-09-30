@@ -10,6 +10,7 @@
 @group(0) @binding(4) var<storage, read_write> bound: array<atomic<u32>>;
 @group(0) @binding(5) var targets: texture_2d<f32>;
 
+
 fn home_of(i: u32) -> vec2<f32> {
     for (var k = 0u; k < P.n_outputs; k++) {
         let o = outs[k];
@@ -84,11 +85,12 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
     let u = P.unit;
     let dt = P.dt;
 
-    // Home positions matter only while eroding and while flying home.
+    // Home positions matter while eroding, during tides, and flying home.
     let releasing = P.homing == 0.0 && P.time < P.release_start + P.release_dur + 0.2;
     let homing = P.homing > 0.0;
+    let tides = P.tide.y > 0.0;
     var h = vec2<f32>(0.0);
-    if (releasing || homing) {
+    if (releasing || homing || tides) {
         h = home_of(i);
     }
     // Erosion: grains break loose in patches, not all at once.
@@ -107,7 +109,13 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
     v = vel_at(pos + v1 * dt * 0.5);
     // A grain bound to a target keeps riding the flow, plus a spring towards
     // its target: the image ripples with the storm, firmer with firmness.
-    let b = atomicLoad(&bound[i]);
+    var b = atomicLoad(&bound[i]);
+    // Eruption: every attractor lets go (recruit.wgsl then drops the stale
+    // claims and the images re-form).
+    if (b != 0u && P.forcing.w > 0.0) {
+        atomicStore(&bound[i], 0u);
+        b = 0u;
+    }
     if (b != 0u && !homing) {
         let cw = u32(P.canvas.x);
         let tp = vec2<u32>((b - 1u) % cw, (b - 1u) / cw);
@@ -123,6 +131,21 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
             if (len > cap) { pull *= cap / len; }
             v += pull;
         }
+    }
+    // Tide: a soft band sweeping across the canvas (centre anchor.x, half
+    // width anchor.y px). Grains whose home it passes fly home, so the desktop
+    // reassembles in a moving strip, and are released behind it to erode
+    // again: no grain ever mixes for longer than one sweep, so the storm
+    // never turns to soup. (Per-grain pulls outside such a band clump.)
+    var tide = 0.0;
+    if (tides && b == 0u && !homing) {
+        let x = abs(h.x - P.tide.x) / P.tide.y;
+        tide = (1.0 - smoothstep(0.35, 1.0, x)) * P.tide.z;
+    }
+    if (tide > 0.0) {
+        let k = 30.0;
+        let spring = s.zw + dt * (k * (h - pos) - 2.0 * sqrt(k) * s.zw);
+        v = mix(v, spring, tide);
     }
     if (homing) {
         // Critically damped springs; the flow fades out as they take over.
@@ -144,4 +167,5 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
         v = vec2<f32>(0.0);
     }
     grains[i] = vec4<f32>(pos, v);
+
 }

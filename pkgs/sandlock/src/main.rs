@@ -26,6 +26,7 @@ use smithay_client_toolkit::{
     registry_handlers,
     seat::{
         keyboard::{KeyEvent, KeyboardHandler, Keysym, Modifiers, RawModifiers},
+        pointer::{PointerEvent, PointerEventKind, PointerHandler},
         Capability, SeatHandler, SeatState,
     },
     session_lock::{
@@ -43,7 +44,7 @@ use smithay_client_toolkit::{
 };
 use wayland_client::{
     globals::registry_queue_init,
-    protocol::{wl_buffer, wl_keyboard, wl_output, wl_seat, wl_surface},
+    protocol::{wl_buffer, wl_keyboard, wl_output, wl_pointer, wl_seat, wl_surface},
     Connection, Dispatch, Proxy, QueueHandle,
 };
 use wayland_protocols::wp::viewporter::client::{
@@ -96,6 +97,8 @@ struct Screen {
     waiting: Option<Instant>,
     /// When the next frame is due (frame-rate cap).
     due: Instant,
+    /// Surface size in logical px (from configure): maps pointer positions.
+    logical: [u32; 2],
 }
 
 impl Screen {
@@ -162,6 +165,12 @@ struct App {
     viewporter: Option<WpViewporter>,
     screencopy: Option<ZwlrScreencopyManagerV1>,
     keyboard: Option<wl_keyboard::WlKeyboard>,
+    pointer: Option<wl_pointer::WlPointer>,
+    /// Pointer positions (canvas px) since the last loop; `true` = it just
+    /// entered a screen.
+    pointer_moves: Vec<([f32; 2], bool)>,
+    /// Each output's rectangle in the canvas, for pointer positions.
+    places: Vec<Place>,
 
     captures: Vec<Capture>,
     lock: Option<SessionLock>,
@@ -224,6 +233,9 @@ fn main() -> anyhow::Result<()> {
         viewporter: globals.bind(&qh, 1..=1, ()).ok(),
         screencopy: globals.bind(&qh, 1..=3, ()).ok(),
         keyboard: None,
+        pointer: None,
+        pointer_moves: Vec::new(),
+        places: Vec::new(),
         captures: Vec::new(),
         lock: None,
         locked: false,
@@ -255,6 +267,7 @@ fn main() -> anyhow::Result<()> {
     // Screenshots first: once locked, the outputs only show the lock.
     let images = capture_all(&mut app, &mut event_loop, &outputs, &qh)?;
     let places = layout(&outputs, &images);
+    app.places = places.clone();
     let canvas = places.iter().fold([0u32; 2], |c, p| {
         [
             c[0].max(p.origin[0] + p.size[0]),
@@ -338,6 +351,7 @@ fn main() -> anyhow::Result<()> {
                 gfx: None,
                 waiting: None,
                 due: Instant::now(),
+                logical: [0, 0],
             });
         }
         app.lock = Some(lock);
@@ -420,6 +434,10 @@ fn main() -> anyhow::Result<()> {
                     });
                 }
             }
+        }
+        for (at, entered) in std::mem::take(&mut app.pointer_moves) {
+            log::trace!("pointer at {at:?}{}", if entered { " (entered)" } else { "" });
+            storm.pointer(at, entered);
         }
         if let Ok(ok) = auth_rx.try_recv() {
             if ok {
@@ -708,13 +726,15 @@ impl App {
             gfx: None,
             waiting: None,
             due: Instant::now(),
+            logical: [0, 0],
         })
     }
 
-    fn mark_configured(&mut self, surface: &wl_surface::WlSurface) {
+    fn mark_configured(&mut self, surface: &wl_surface::WlSurface, size: (u32, u32)) {
         for screen in &mut self.screens {
             if screen.role.wl_surface() == surface {
                 screen.configured = true;
+                screen.logical = [size.0, size.1];
             }
         }
     }
@@ -743,10 +763,10 @@ impl SessionLockHandler for App {
         _: &Connection,
         _: &QueueHandle<Self>,
         surface: SessionLockSurface,
-        _: SessionLockSurfaceConfigure,
+        configure: SessionLockSurfaceConfigure,
         _: u32,
     ) {
-        self.mark_configured(surface.wl_surface());
+        self.mark_configured(surface.wl_surface(), configure.new_size);
     }
 }
 
@@ -760,10 +780,37 @@ impl LayerShellHandler for App {
         _: &Connection,
         _: &QueueHandle<Self>,
         layer: &LayerSurface,
-        _: LayerSurfaceConfigure,
+        configure: LayerSurfaceConfigure,
         _: u32,
     ) {
-        self.mark_configured(layer.wl_surface());
+        self.mark_configured(layer.wl_surface(), configure.new_size);
+    }
+}
+
+impl PointerHandler for App {
+    fn pointer_frame(&mut self, _: &Connection, _: &QueueHandle<Self>, pointer: &wl_pointer::WlPointer, events: &[PointerEvent]) {
+        for event in events {
+            let Some(screen) = self.screens.iter().find(|s| s.role.wl_surface() == &event.surface) else {
+                continue;
+            };
+            let entered = match event.kind {
+                PointerEventKind::Enter { serial } => {
+                    // No cursor over the lock: the grains show the pointer.
+                    pointer.set_cursor(serial, None, 0, 0);
+                    true
+                }
+                PointerEventKind::Motion { .. } => false,
+                _ => continue,
+            };
+            let Some(place) = self.places.get(screen.output) else { continue };
+            let [lw, lh] = screen.logical;
+            if lw == 0 || lh == 0 {
+                continue;
+            }
+            let x = place.origin[0] as f32 + event.position.0 as f32 * place.size[0] as f32 / lw as f32;
+            let y = place.origin[1] as f32 + event.position.1 as f32 * place.size[1] as f32 / lh as f32;
+            self.pointer_moves.push(([x, y], entered));
+        }
     }
 }
 
@@ -874,6 +921,12 @@ impl SeatHandler for App {
                 Err(e) => log::error!("keyboard: {e}"),
             }
         }
+        if capability == Capability::Pointer && self.pointer.is_none() {
+            match self.seat_state.get_pointer(qh, &seat) {
+                Ok(p) => self.pointer = Some(p),
+                Err(e) => log::error!("pointer: {e}"),
+            }
+        }
     }
 
     fn remove_capability(
@@ -887,6 +940,11 @@ impl SeatHandler for App {
             && let Some(k) = self.keyboard.take()
         {
             k.release();
+        }
+        if capability == Capability::Pointer
+            && let Some(p) = self.pointer.take()
+        {
+            p.release();
         }
     }
 

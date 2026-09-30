@@ -65,6 +65,13 @@ pub(crate) struct Storm {
     pub(crate) dot_radius: f32,
     dots: Vec<Dot>,
     pending: Vec<Splat>,
+    /// Splats that go off later (the eruption's shockwave).
+    scheduled: Vec<(f32, Splat)>,
+    /// Release every grain bound to an attractor on the next step.
+    shatter: bool,
+    /// Latest pointer position (canvas px), and where it was at the last step.
+    pointer: Option<[f32; 2]>,
+    pointer_prev: Option<[f32; 2]>,
     /// Shake of the dots after a wrong password: (start time).
     shake: Option<f32>,
 }
@@ -93,6 +100,10 @@ impl Storm {
             dot_radius: s[1] * 0.0055,
             dots: Vec::new(),
             pending: Vec::new(),
+            scheduled: Vec::new(),
+            shatter: false,
+            pointer: None,
+            pointer_prev: None,
             shake: None,
         }
     }
@@ -152,26 +163,94 @@ impl Storm {
     /// outwards, so it reads as an explosion.
     pub(crate) fn wrong(&mut self) {
         self.phase = Phase::Storm;
+        let e = self.tuning.eruption;
+        if e <= 0.0 {
+            self.shake = Some(self.time);
+            return;
+        }
         let centre = self.cells(self.anchor);
-        const RING: usize = 8;
-        for k in 0..RING {
-            let angle = k as f32 / RING as f32 * std::f32::consts::TAU + self.rng.range(-0.2, 0.2);
-            let at = [centre[0] + 7.0 * angle.cos(), centre[1] + 7.0 * angle.sin()];
-            let spin = if k % 2 == 0 { 180.0 } else { -180.0 };
-            self.pending.push(Splat::Vortex {
-                at,
-                spin,
-                radius: 4.0,
-            });
+        // A shockwave: rings of counter-spinning vortices going off one after
+        // another, each wider and stronger, so the eruption spreads outwards.
+        // (radius from the dots, vortices, spin, vortex size) in cells.
+        const RINGS: [(f32, usize, f32, f32); 4] =
+            [(6.0, 8, 450.0, 4.0), (13.0, 12, 420.0, 6.0), (21.0, 14, 380.0, 8.0), (30.0, 16, 320.0, 10.0)];
+        for (ring, &(r, n, spin, size)) in RINGS.iter().enumerate() {
+            let at_time = self.time + ring as f32 * 0.1;
+            let twist = self.rng.range(0.0, std::f32::consts::TAU);
+            for k in 0..n {
+                let angle = twist + k as f32 / n as f32 * std::f32::consts::TAU + self.rng.range(-0.15, 0.15);
+                let at = [centre[0] + r * angle.cos(), centre[1] + r * angle.sin()];
+                let spin = if k % 2 == 0 { spin } else { -spin } * e;
+                self.scheduled.push((at_time, Splat::Vortex { at, spin, radius: size }));
+            }
         }
         self.pending.push(Splat::Vortex {
             at: centre,
-            spin: self.rng.sign() * 220.0,
-            radius: 6.0,
+            spin: self.rng.sign() * 500.0 * e,
+            radius: 8.0,
         });
-        self.entropy += 1.0;
+        self.entropy += 2.5 * e;
+        // Attractors let go of every grain; the images re-form afterwards.
+        self.shatter = true;
         // The dots shake, then vanish (see `step`).
         self.shake = Some(self.time);
+    }
+
+    /// The pointer moved to `at` (canvas px). `jumped`: it just entered a
+    /// screen, so the distance from its last position is not a stroke.
+    pub(crate) fn pointer(&mut self, at: [f32; 2], jumped: bool) {
+        if jumped {
+            self.pointer_prev = None;
+        }
+        self.pointer = Some(at);
+    }
+
+    /// Stirs the fluid along the pointer's path since the last step, with its
+    /// velocity, like dragging in the WebGL fluid demo.
+    fn stir(&mut self, dt: f32, splats: &mut Vec<Splat>) {
+        let (Some(now), prev) = (self.pointer, self.pointer_prev) else { return };
+        self.pointer_prev = Some(now);
+        let Some(prev) = prev else { return };
+        let d = [now[0] - prev[0], now[1] - prev[1]];
+        let len = d[0].hypot(d[1]);
+        if len < 0.5 || self.tuning.mouse <= 0.0 {
+            return;
+        }
+        // Velocity in cells/s, capped so a flick can't blow up the solver.
+        let mut v = [d[0] / self.cell[0] / dt, d[1] / self.cell[1] / dt];
+        let speed = v[0].hypot(v[1]);
+        let cap = 400.0;
+        if speed > cap {
+            v = [v[0] * cap / speed, v[1] * cap / speed];
+        }
+        let force = [v[0] * self.tuning.mouse, v[1] * self.tuning.mouse];
+        // Along the path, so a fast stroke leaves a trail rather than a dot.
+        let steps = ((len / (3.0 * self.cell[0])).ceil() as usize).clamp(1, 4);
+        for s in 1..=steps {
+            let f = s as f32 / steps as f32;
+            let at = self.cells([prev[0] + d[0] * f, prev[1] + d[1] * f]);
+            splats.push(Splat::Push { at, force, radius: 3.5 });
+        }
+    }
+
+    /// The tide band for this step: it sweeps left to right once per `period`
+    /// seconds (after the storm has had one period to develop), fading in
+    /// and out at the edges; it holds off while the storm is hot after a
+    /// wrong password.
+    fn tide(&self, period: f32, storming: bool) -> [f32; 4] {
+        if period <= 0.0 || !storming {
+            return [0.0; 4];
+        }
+        let half = self.canvas[0].max(self.canvas[1]) * 0.12;
+        let t = self.time - RELEASE_DELAY - period * 0.6;
+        if t < 0.0 {
+            return [0.0; 4];
+        }
+        let phase = (t / period).fract();
+        let travel = self.canvas[0] + 4.0 * half;
+        let centre = -2.0 * half + phase * travel;
+        let calm = 1.0 / (1.0 + 2.0 * self.entropy);
+        [centre, half, calm, 0.0]
     }
 
     pub(crate) fn correct(&mut self) {
@@ -192,6 +271,16 @@ impl Storm {
         self.time += dt;
         let homing = self.homing_for().map(|t| (t / HOMING_RAMP).min(1.0));
         let mut splats = std::mem::take(&mut self.pending);
+        if homing.is_none() {
+            self.stir(dt, &mut splats);
+        }
+        let now = self.time;
+        self.scheduled.retain(|(at, s)| {
+            if *at <= now {
+                splats.push(*s);
+            }
+            *at > now
+        });
 
         let t = self.tuning;
         if homing.is_none() && self.time >= RELEASE_DELAY && t.gusts > 0.0 {
@@ -220,7 +309,7 @@ impl Storm {
                 self.next_gust += self.rng.range(0.12, 0.35) / ((1.0 + self.entropy) * t.gusts);
             }
         }
-        self.entropy *= (-dt / 6.0).exp();
+        self.entropy *= (-dt / 8.0).exp();
         if self.shake.is_some_and(|t| self.time - t >= SHAKE) {
             self.shake = None;
             self.dots.clear();
@@ -237,7 +326,8 @@ impl Storm {
         };
         // Wind strength, wind feature size (~1/3 screen height), fine turbulence.
         let wind = if storming { WIND * t.intensity * (1.0 + 0.8 * self.entropy) } else { 0.0 };
-        params.forcing = [wind, 20.0, 55.0 * t.swirl, 0.0];
+        params.tide = self.tide(t.tide, storming);
+        params.forcing = [wind, 20.0, 55.0 * t.swirl, if std::mem::take(&mut self.shatter) { 1.0 } else { 0.0 }];
         splats
     }
 

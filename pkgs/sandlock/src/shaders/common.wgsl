@@ -9,7 +9,7 @@ struct Params {
     homing: f32,         // 0 = storm, 1 = springs pull every grain home
     release_start: f32,  // when the desktop starts eroding
     release_dur: f32,
-    forcing: vec4<f32>,  // x wind force (cells/s^2), y wind scale (cells), z fine turbulence (px/s)
+    forcing: vec4<f32>,  // x wind force (cells/s^2), y wind scale (cells), z fine turbulence (px/s), w 1 = release attractor grains
     vorticity: f32,
     dissipation: f32,
     unit: f32,           // canvas height / 1440: scales px-based constants
@@ -18,6 +18,7 @@ struct Params {
     splat_count: u32,
     cell_x: f32,         // horizontally: the grid ends exactly at the canvas edge
     seed: u32,           // changes every step: per-step randomness
+    tide: vec4<f32>,     // tide: x band centre px, y half width px (0 = off), z strength
 }
 
 // One output's rectangle in the canvas and its first grain. Grains are laid

@@ -88,6 +88,15 @@ pub(crate) struct Storm {
     pub(crate) gusts: f32,
     /// Small curls: vorticity confinement and fine turbulence.
     pub(crate) swirl: f32,
+    /// Wrong-password eruption: a shockwave of vortices, a much wilder storm
+    /// afterwards, and attractor images blown apart. 0 = off.
+    pub(crate) eruption: f32,
+    /// How strongly moving the mouse stirs the storm. 0 = off.
+    pub(crate) mouse: f32,
+    /// Seconds per tide: a band sweeping across the screens in which the
+    /// desktop reassembles and then erodes again, so the storm never mixes
+    /// into one soup. 0 = off.
+    pub(crate) tide: f32,
 }
 
 impl Default for Storm {
@@ -97,6 +106,9 @@ impl Default for Storm {
             intensity: 0.5,
             gusts: 0.1,
             swirl: 0.35,
+            eruption: 1.0,
+            mouse: 1.0,
+            tide: 20.0,
         }
     }
 }
@@ -122,6 +134,9 @@ pub(crate) fn load(path: &Path) -> anyhow::Result<Config> {
         ("intensity", config.storm.intensity),
         ("gusts", config.storm.gusts),
         ("swirl", config.storm.swirl),
+        ("eruption", config.storm.eruption),
+        ("mouse", config.storm.mouse),
+        ("tide", config.storm.tide),
     ] {
         anyhow::ensure!(
             value.is_finite() && value >= 0.0,

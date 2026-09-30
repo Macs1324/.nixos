@@ -45,6 +45,8 @@ pub(crate) struct Params {
     pub(crate) splat_count: u32,
     pub(crate) cell_x: f32,
     pub(crate) seed: u32,
+    /// Tide: band centre (px), half width (px, 0 = off), strength, unused.
+    pub(crate) tide: [f32; 4],
 }
 
 #[repr(C)]
@@ -440,6 +442,7 @@ impl Sim {
             splat_count: 0,
             cell_x,
             seed: 0,
+            tide: [0.0; 4],
         };
         let params_buf = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("params"),
