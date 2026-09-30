@@ -68,6 +68,23 @@ cx = 1720.0
         self.assertNotIn("widget_order", document["lockscreen_widgets"])
         self.assertEqual(document["lockscreen_widgets"]["widget"]["lockscreen-login-box@DP-1"]["cx"], 1720.0)
 
+    def test_idle_lock_action_removed_timing_kept(self):
+        self.path.write_text('''[idle]
+behavior_order = [ "lock", "screen-off" ]
+    [idle.behavior.lock]
+    action = "lock"
+    enabled = true
+    timeout = 600
+    [idle.behavior.screen-off]
+    action = "screen_off"
+''')
+        self.assertTrue(reset.reset_overrides(self.path, ["DP-1"]))
+        document = tomlkit.parse(self.path.read_text())
+        lock = document["idle"]["behavior"]["lock"]
+        self.assertNotIn("action", lock)
+        self.assertEqual((lock["enabled"], lock["timeout"]), (True, 600))
+        self.assertEqual(document["idle"]["behavior"]["screen-off"]["action"], "screen_off")
+
     def test_idempotent(self):
         reset.reset_overrides(self.path, ["DP-1"])
         original_stat = self.path.stat()

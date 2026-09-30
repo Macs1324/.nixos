@@ -1,4 +1,5 @@
-"""Restore only Nix-owned wallpaper settings when Home Manager is activated."""
+"""Restore only Nix-owned Noctalia settings (wallpapers, and how the idle lock
+locks) when Home Manager is activated."""
 import json
 import os
 from pathlib import Path
@@ -26,6 +27,11 @@ def reset_overrides(path, connectors):
         # A saved order drops every lock screen widget it does not list,
         # including the Nix-declared ones.
         ("lockscreen_widgets", "widget_order"),
+        # The idle lock runs sandlock (home/sandlock.nix); a UI-saved action
+        # would bring Noctalia's own lock screen back. Whether and when it
+        # locks stay the UI's.
+        ("idle", "behavior", "lock", "action"),
+        ("idle", "behavior", "lock", "command"),
     ]
     for keys in owned:
         table = document

@@ -58,6 +58,16 @@ in {
     # sandlock locks before suspend instead of Noctalia; swayidle's
     # before-sleep hook holds the suspend until `sandlock -f` has locked.
     programs.noctalia.settings.lockscreen.lock_before_suspend = false;
+
+    # Noctalia's idle lock (after `timeout` s away) locks with sandlock too.
+    # Its settings UI may still toggle it and change the timeout; how it locks
+    # is Nix's (scripts/reset-wallpaper-overrides.py drops UI overrides of it).
+    programs.noctalia.settings.idle.behavior.lock = {
+      enabled = lib.mkDefault true;
+      timeout = lib.mkDefault 600;
+      action = "command";
+      command = lock;
+    };
     services.swayidle = {
       enable = true;
       events = {
