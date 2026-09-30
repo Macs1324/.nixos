@@ -126,6 +126,17 @@ pub(crate) struct Storm {
     /// (1/s), so pulls like tides and attractors leave no empty patches.
     /// 0 = off.
     pub(crate) density: f32,
+    /// Share of the desktop at rest at any moment, in quiet zones scattered
+    /// across the screens that drift and change shape. 0 = off.
+    pub(crate) quiet: f32,
+    /// Typical size of a quiet zone (px on a 1440 px tall canvas).
+    pub(crate) quiet_size: f32,
+    /// Seconds for the quiet zones to change completely.
+    pub(crate) quiet_drift: f32,
+    /// How calm quiet zones get, 0..1: at 1 their grains come nearly to
+    /// rest at home and the desktop shows through clearly; lower, it shows
+    /// through blurred and rippling.
+    pub(crate) quiet_calm: f32,
 }
 
 impl Default for Storm {
@@ -137,8 +148,12 @@ impl Default for Storm {
             swirl: 0.35,
             eruption: 1.0,
             mouse: 1.0,
-            tide: 20.0,
+            tide: 0.0,
             density: 4.0,
+            quiet: 0.3,
+            quiet_size: 150.0,
+            quiet_drift: 4.0,
+            quiet_calm: 0.175,
         }
     }
 }
@@ -168,6 +183,10 @@ pub(crate) fn load(path: &Path) -> anyhow::Result<Config> {
         ("mouse", config.storm.mouse),
         ("tide", config.storm.tide),
         ("density", config.storm.density),
+        ("quiet", config.storm.quiet),
+        ("quiet_size", config.storm.quiet_size),
+        ("quiet_drift", config.storm.quiet_drift),
+        ("quiet_calm", config.storm.quiet_calm),
     ] {
         anyhow::ensure!(
             value.is_finite() && value >= 0.0,

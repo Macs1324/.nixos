@@ -13,6 +13,9 @@
 // per fluid cell it is computed from (for the next step).
 @group(0) @binding(6) var phi: texture_2d<f32>;
 @group(0) @binding(7) var<storage, read_write> counts: array<atomic<u32>>;
+// Quiet-zone strength per fluid cell over home positions (fluid.wgsl
+// `quiet_map`).
+@group(0) @binding(8) var quiet: texture_2d<f32>;
 
 
 fn home_of(i: u32) -> vec2<f32> {
@@ -95,6 +98,21 @@ fn drift_at(pos: vec2<f32>) -> vec2<f32> {
     return g * cell;
 }
 
+// `quiet` bilinearly interpolated at `h` (px).
+fn quiet_texel(c: vec2<i32>, size: vec2<i32>) -> f32 {
+    return textureLoad(quiet, clamp(c, vec2<i32>(0), size - 1), 0).x;
+}
+
+fn quiet_at(h: vec2<f32>) -> f32 {
+    let size = vec2<i32>(textureDimensions(quiet));
+    let x = h / vec2<f32>(P.cell_x, P.cell) - 0.5;
+    let i = vec2<i32>(floor(x));
+    let f = x - floor(x);
+    let top = mix(quiet_texel(i, size), quiet_texel(i + vec2<i32>(1, 0), size), f.x);
+    let bottom = mix(quiet_texel(i + vec2<i32>(0, 1), size), quiet_texel(i + vec2<i32>(1, 1), size), f.x);
+    return mix(top, bottom, f.y);
+}
+
 fn count(pos: vec2<f32>) {
     if (P.density <= 0.0) { return; }
     let cell = vec2<f32>(P.cell_x, P.cell);
@@ -124,7 +142,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
     // Home positions matter while eroding, during tides, and flying home.
     let releasing = P.homing == 0.0 && P.time < P.release_start + P.release_dur + 0.2;
     let homing = P.homing > 0.0;
-    let tides = P.tide.y > 0.0;
+    let tides = P.tide.y > 0.0 || P.quiet.w > 0.0;
     var h = vec2<f32>(0.0);
     if (releasing || homing || tides) {
         h = home_of(i);
@@ -178,9 +196,29 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
     // again: no grain ever mixes for longer than one sweep, so the storm
     // never turns to soup. (Per-grain pulls outside such a band clump.)
     var tide = 0.0;
-    if (tides && b == 0u && !homing) {
+    if (P.tide.y > 0.0 && b == 0u && !homing) {
         let x = abs(h.x - P.tide.x) / P.tide.y;
         tide = (1.0 - smoothstep(0.35, 1.0, x)) * P.tide.z;
+    }
+    // Quiet zones: where a slowly morphing noise field over home positions
+    // is strong, the storm is calmer for those grains: it carries them more
+    // slowly and a soft spring draws them towards home, so the desktop
+    // shows through blurred and rippling in scattered patches that come and
+    // go. Never fully at rest (that is `tide`). Density correction refills
+    // what they draw away.
+    if (P.quiet.w > 0.0 && b == 0u && !homing) {
+        let calm = quiet_at(h);
+        if (calm > 0.0) {
+            // Slower flow plus a pull proportional to the distance from home
+            // (not a spring: at partial strength a spring's momentum is
+            // mostly mixed away each step). They balance a few px from home
+            // at calm 1 and ~20 px at 0.5; far grains stream in, capped.
+            var pull = (h - pos) * 12.0 * calm;
+            let cap = 700.0 * u;
+            let len = length(pull);
+            if (len > cap) { pull *= cap / len; }
+            v = v * (1.0 - 0.8 * calm) + pull;
+        }
     }
     if (tide > 0.0) {
         let k = 30.0;

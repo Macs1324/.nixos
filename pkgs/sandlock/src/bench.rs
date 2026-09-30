@@ -104,7 +104,11 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
     let canvas = [x, places.iter().map(|p| p.size[1]).max().context("no images")?];
     println!("canvas {}x{}, outputs {:?}", canvas[0], canvas[1], places.iter().map(|p| p.size).collect::<Vec<_>>());
 
+    // Startup, as the lock pays it before the screen is locked (screenshots
+    // aside): `sandlock -f` gives up after 4 s and the fallback locks instead.
+    let t0 = Instant::now();
     let gpu = Gpu::new()?;
+    let t_gpu = t0.elapsed();
     let shots: Vec<_> = images.iter().map(|i| Some(Image { width: i.width, height: i.height, bgra: i.bgra.clone() })).collect();
     let mut sim = Sim::new(&gpu, canvas, &places, &shots)?;
     drop(shots);
@@ -121,7 +125,15 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
             levels: attract::levels(&img.bgra),
         })
         .collect();
+    let t_sim = t0.elapsed() - t_gpu;
     let clocks = attract::install(&config.attractors, &screens, primary, &gpu, &mut sim);
+    gpu.device.poll(wgpu::PollType::wait_indefinitely())?;
+    println!(
+        "startup: GPU {:.0} ms, simulation {:.0} ms, attractors {:.0} ms",
+        t_gpu.as_secs_f64() * 1000.0,
+        t_sim.as_secs_f64() * 1000.0,
+        (t0.elapsed() - t_gpu - t_sim).as_secs_f64() * 1000.0
+    );
     let p = places[primary];
     let storm = Storm::new(
         [canvas[0] as f32, canvas[1] as f32],
@@ -154,8 +166,8 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
     println!("original roughness {original:.2} (mean |Δluma| between neighbours)");
     println!();
     println!(
-        "{:>6}  {:>7}  {:>8}  {:>9}  {:>10}  {:>9}  {:>7}  {:>15}  {:>15}",
-        "t (s)", "holes", "at home", "roughness", "vs orig.", "offscreen", "hidden", "2px edge/inner", "black edge/inner"
+        "{:>6}  {:>7}  {:>8}  {:>6}  {:>9}  {:>10}  {:>9}  {:>7}  {:>15}  {:>15}",
+        "t (s)", "holes", "at home", "clear", "roughness", "vs orig.", "offscreen", "hidden", "2px edge/inner", "black edge/inner"
     );
 
     // Unpaced: GPU cost per frame, and the picture at the checkpoints.
@@ -192,9 +204,10 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
             let rough = roughness(&shown, canvas);
             let sp = splats(&scene.sim.read_packed(&scene.gpu)?, canvas, &places);
             println!(
-                "{t:>6.0}  {:>6.2}%  {:>7.1}%  {:>9.2}  {:>9.2}x  {:>8.2}%  {:>6.2}%  {:>6.1}%/{:>6.1}%  {:>6.2}%/{:>6.2}%",
+                "{t:>6.0}  {:>6.2}%  {:>7.1}%  {:>5.1}%  {:>9.2}  {:>9.2}x  {:>8.2}%  {:>6.2}%  {:>6.1}%/{:>6.1}%  {:>6.2}%/{:>6.2}%",
                 m.holes * 100.0,
                 m.home * 100.0,
+                m.clear * 100.0,
                 rough,
                 rough / original.max(1e-6),
                 m.offscreen * 100.0,
@@ -245,6 +258,8 @@ struct Measure {
     holes: f32,
     /// Shown grains within `NEAR` px of home.
     home: f32,
+    /// Shown grains on their own home pixel: the desktop exactly as it was.
+    clear: f32,
     /// Grains in canvas pixels that belong to no output (invisible).
     offscreen: f32,
     /// Grains on no pixel at all (under another grain).
@@ -274,7 +289,7 @@ fn grain(id: u32, images: &[Image], places: &[Place]) -> Option<([i64; 2], f32)>
 
 fn measure(owner: &[u32], canvas: [u32; 2], images: &[Image], places: &[Place]) -> Measure {
     let w = canvas[0] as usize;
-    let (mut pixels, mut filled, mut home) = (0u64, 0u64, 0u64);
+    let (mut pixels, mut filled, mut home, mut clear) = (0u64, 0u64, 0u64, 0u64);
     for p in places {
         for y in p.origin[1]..p.origin[1] + p.size[1] {
             for x in p.origin[0]..p.origin[0] + p.size[0] {
@@ -290,6 +305,7 @@ fn measure(owner: &[u32], canvas: [u32; 2], images: &[Image], places: &[Place]) 
                 let Some((h, _)) = grain(id - 1, images, places) else { continue };
                 let (dx, dy) = (h[0] - i64::from(x), h[1] - i64::from(y));
                 home += u64::from(dx * dx + dy * dy <= NEAR * NEAR);
+                clear += u64::from(dx == 0 && dy == 0);
             }
         }
     }
@@ -299,6 +315,7 @@ fn measure(owner: &[u32], canvas: [u32; 2], images: &[Image], places: &[Place]) 
         hidden: (pixels - placed) as f32 / pixels.max(1) as f32,
         holes: 1.0 - filled as f32 / pixels.max(1) as f32,
         home: home as f32 / filled.max(1) as f32,
+        clear: clear as f32 / filled.max(1) as f32,
     }
 }
 

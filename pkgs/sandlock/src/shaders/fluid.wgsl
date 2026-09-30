@@ -166,6 +166,19 @@ fn dsource(@builtin(global_invocation_id) id: vec3<u32>) {
     textureStore(scal_out, id.xy, vec4<f32>(s, 0.0, 0.0, 0.0));
 }
 
+// Quiet zones (grains.wgsl): how quiet each cell's homes are, 0..calm.
+// Per cell rather than per grain: the zones are ~20 cells across, so the
+// grains' bilinear lookup of this map matches the noise closely, at a
+// fraction of the cost.
+@compute @workgroup_size(16, 16)
+fn quiet_map(@builtin(global_invocation_id) id: vec3<u32>) {
+    let size = textureDimensions(scal_out);
+    if (id.x >= size.x || id.y >= size.y) { return; }
+    let h = (vec2<f32>(id.xy) + 0.5) * vec2<f32>(P.cell_x, P.cell);
+    let n = quiet_noise(h, P.quiet.y, P.quiet.z);
+    textureStore(scal_out, id.xy, vec4<f32>(smoothstep(P.quiet.x, P.quiet.x + QUIET_RAMP, n) * P.quiet.w, 0.0, 0.0, 0.0));
+}
+
 // Subtract the pressure gradient: the velocity becomes (nearly) incompressible.
 @compute @workgroup_size(16, 16)
 fn gradient(@builtin(global_invocation_id) id: vec3<u32>) {

@@ -53,6 +53,8 @@ pub(crate) struct Params {
     /// Density correction rate (1/s, 0 = off).
     pub(crate) density: f32,
     pub(crate) _pad: [u32; 3],
+    /// Quiet zones: noise threshold, size (px), noise time, strength (0 = off).
+    pub(crate) quiet: [f32; 4],
 }
 
 #[repr(C)]
@@ -395,6 +397,7 @@ pub(crate) struct Sim {
     counts: wgpu::Buffer,
     dsource: Pass,
     phi: [Pass; 2],
+    quiet_map: Pass,
 }
 
 /// Per-attractor recruit settings (attract.wgsl `Rect`).
@@ -550,6 +553,7 @@ impl Sim {
             tide: [0.0; 4],
             density: 0.0,
             _pad: [0; 3],
+            quiet: [0.0; 4],
         };
         let params_buf = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("params"),
@@ -592,6 +596,7 @@ impl Sim {
         });
         let dsrc = scalar();
         let phi = [scalar(), scalar()];
+        let quiet = scalar();
         enum Res<'a> {
             Params,
             Splats,
@@ -713,6 +718,7 @@ impl Sim {
             &[(0, Res::Params), (5, Res::View(&psi[0])), (7, Res::View(&psi[1]))],
         );
         let dsource = pass("dsource", &[(0, Res::Params), (8, Res::Buffer(&counts)), (7, Res::View(&dsrc))]);
+        let quiet_map = pass("quiet_map", &[(0, Res::Params), (7, Res::View(&quiet))]);
         // The pressure pass solves laplacian(phi) = source just the same.
         let phi_pass = [
             pass("pressure", &[(5, Res::View(&phi[0])), (6, Res::View(&dsrc)), (7, Res::View(&phi[1]))]),
@@ -760,6 +766,7 @@ impl Sim {
                 entry(5, cs, texture(UNFILTERED)),
                 entry(6, cs, texture(UNFILTERED)),
                 entry(7, cs, storage(false)),
+                entry(8, cs, texture(UNFILTERED)),
             ],
         });
         let grains_pass = Pass {
@@ -777,6 +784,7 @@ impl Sim {
                     bind(5, tv(&targets)),
                     bind(6, tv(&phi[0])),
                     bind(7, counts.as_entire_binding()),
+                    bind(8, tv(&quiet)),
                 ],
             }),
         };
@@ -922,6 +930,7 @@ impl Sim {
             counts,
             dsource,
             phi: phi_pass,
+            quiet_map,
         };
         // Place every grain at home before the first frame is drawn.
         sim.step(gpu, 0.0, &[]);
@@ -1113,6 +1122,11 @@ impl Sim {
             cpass.set_bind_group(0, &self.turbulence.group, &[]);
             // Always, so the first step (dt = 0) also fills what grains read.
             cpass.dispatch_workgroups(gx, gy, 1);
+            if self.params.quiet[3] > 0.0 {
+                cpass.set_pipeline(&self.quiet_map.pipeline);
+                cpass.set_bind_group(0, &self.quiet_map.group, &[]);
+                cpass.dispatch_workgroups(gx, gy, 1);
+            }
             if let Some(rect_group) = &self.rect_group {
                 cpass.set_pipeline(&self.recruit.pipeline);
                 cpass.set_bind_group(0, &self.recruit.group, &[]);
