@@ -2,7 +2,35 @@
   pkgs,
   inputs,
   ...
-}: {
+}: let
+  # Boot splash from adi1090x's theme pack; preview them all at
+  # github.com/adi1090x/plymouth-themes and change this name to swap.
+  plymouthTheme = "hexagon_dots";
+  # The pack's scripts centre the animation once, on the first monitor's size
+  # (`GetWidth(0)`). Plymouth starts on the firmware framebuffer (simpledrm)
+  # and only later swaps in xe's real monitors, and it lays every monitor out
+  # centred in one canvas as big as the largest. So the position is stale and
+  # measured on the wrong screen: re-centre on the canvas (`GetWidth()`) every
+  # frame, which is the centre of each monitor.
+  plymouthThemes = (pkgs.adi1090x-plymouth-themes.override {selected_themes = [plymouthTheme];}).overrideAttrs (old: {
+    # installPhase is overridden without runHook, so postInstall would never run.
+    postFixup =
+      (old.postFixup or "")
+      + ''
+        substituteInPlace $out/share/plymouth/themes/${plymouthTheme}/${plymouthTheme}.script \
+          --replace-fail 'Window.GetWidth(0)' 'Window.GetWidth()' \
+          --replace-fail 'Window.GetHeight(0)' 'Window.GetHeight()' \
+          --replace-fail 'Plymouth.SetRefreshFunction (refresh_callback);' '
+        fun centred_refresh_callback ()
+          {
+            flyingman_sprite.SetX(Window.GetX() + (Window.GetWidth() / 2 - flyingman_image[0].GetWidth() / 2));
+            flyingman_sprite.SetY(Window.GetY() + (Window.GetHeight() / 2 - flyingman_image[0].GetHeight() / 2));
+            refresh_callback();
+          }
+        Plymouth.SetRefreshFunction (centred_refresh_callback);'
+      '';
+  });
+in {
   # Bootloader.
   boot.loader.timeout = null;
   boot.loader.grub.enable = true;
@@ -15,6 +43,17 @@
   # its own. Raising this above ~5 needs a bigger ESP.
   boot.loader.grub.configurationLimit = 5;
   boot.loader.efi.canTouchEfiVariables = true;
+
+  # Stylix's own splash is off in system/theme.nix. The systemd initrd lets
+  # Plymouth start early instead of after the stage-1 log spam.
+  boot.plymouth = {
+    enable = true;
+    theme = plymouthTheme;
+    themePackages = [plymouthThemes];
+  };
+  boot.initrd.systemd.enable = true;
+  boot.consoleLogLevel = 3;
+  boot.kernelParams = ["quiet" "udev.log_level=3" "systemd.show_status=auto"];
 
   networking.networkmanager.enable = true;
   # Set your time zone.

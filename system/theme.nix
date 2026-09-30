@@ -2,6 +2,8 @@
   imports = [../modules/theme.nix];
 
   stylix.targets.kmscon.enable = false;
+  # The boot splash is an adi1090x theme (system/base.nix).
+  stylix.targets.plymouth.enable = false;
   # This target overlays gtksourceview, which changes the hash of everything
   # built on it (Inkscape and friends) and forces source builds on every palette
   # change. Home Manager's gtksourceview target installs the same style per user.
