@@ -27,6 +27,9 @@
         disable_hyprland_logo = true;
         animate_manual_resizes = true;
         animate_mouse_windowdragging = true;
+        # If the lock client (sandlock) dies while locked, let a new one take
+        # over instead of leaving a dead lock screen only a TTY can fix.
+        allow_session_lock_restore = true;
       };
       dwindle = {
         smart_split = true;

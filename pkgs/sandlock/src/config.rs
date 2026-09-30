@@ -15,20 +15,25 @@ pub(crate) struct Config {
     pub(crate) attractors: Vec<Attractor>,
 }
 
-/// An image whose opaque pixels pull in the most similar grains, so it
-/// emerges from the storm out of the desktop's own pixels.
+/// An image (or a live widget) whose opaque pixels pull in the most similar
+/// grains, so it emerges from the storm out of the desktop's own pixels.
+/// Exactly one of `image` and `clock` must be set.
 #[derive(Debug, Clone, Deserialize)]
 #[serde(deny_unknown_fields)]
 pub(crate) struct Attractor {
     /// PNG; pixels with alpha >= 50% become targets.
-    pub(crate) image: PathBuf,
+    #[serde(default)]
+    pub(crate) image: Option<PathBuf>,
+    /// A live clock instead of an image.
+    #[serde(default)]
+    pub(crate) clock: Option<Clock>,
     /// Connector name ("DP-1"); default: the largest output.
     #[serde(default)]
     pub(crate) output: Option<String>,
     /// Centre of the image as a fraction of the output.
     #[serde(default = "Attractor::default_position")]
     pub(crate) position: [f32; 2],
-    /// Screen pixels per image pixel.
+    /// Screen pixels per image pixel (a clock is 100 px tall at 1).
     #[serde(default = "Attractor::one")]
     pub(crate) scale: f32,
     /// Width in screen pixels (overrides `scale`, keeps the aspect ratio).
@@ -46,6 +51,17 @@ pub(crate) struct Attractor {
     /// How target colours are matched against the desktop's grains.
     #[serde(default)]
     pub(crate) tone: Tone,
+}
+
+/// A clock attractor: the local time in seven-segment digits. Only the digits
+/// that change release and recruit grains.
+#[derive(Debug, Clone, Copy, Default, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub(crate) struct Clock {
+    /// Show seconds (they change faster than `emerge`, so they never settle).
+    pub(crate) seconds: bool,
+    /// 12-hour time instead of 24-hour.
+    pub(crate) twelve_hour: bool,
 }
 
 #[derive(Debug, Clone, Copy, Default, PartialEq, Deserialize)]
@@ -74,6 +90,15 @@ impl Attractor {
     }
     fn default_reach() -> f32 {
         150.0
+    }
+
+    /// Names the attractor in messages: its image path, or "clock".
+    pub(crate) fn describe(&self) -> String {
+        match (&self.image, &self.clock) {
+            (Some(image), _) => image.display().to_string(),
+            (None, Some(_)) => "clock".into(),
+            (None, None) => "attractor".into(),
+        }
     }
 }
 
@@ -145,9 +170,14 @@ pub(crate) fn load(path: &Path) -> anyhow::Result<Config> {
     }
     for a in &config.attractors {
         anyhow::ensure!(
+            a.image.is_some() != a.clock.is_some(),
+            "{}: an attractor needs exactly one of `image` and `clock`",
+            a.describe()
+        );
+        anyhow::ensure!(
             a.emerge > 0.0 && a.reach >= 1.0,
             "{}: emerge must be > 0 and reach >= 1",
-            a.image.display()
+            a.describe()
         );
     }
     Ok(config)
@@ -170,6 +200,25 @@ mod tests {
         assert_eq!(c.attractors.len(), 1);
         assert_eq!(c.attractors[0].position, [0.5, 0.35]);
         assert_eq!(c.attractors[0].width, Some(400.0));
+    }
+
+    #[test]
+    fn clock_attractor() {
+        let c: Config = toml::from_str("[[attractor]]\nclock = { seconds = true }\n").unwrap();
+        let clock = c.attractors[0].clock.unwrap();
+        assert!(clock.seconds && !clock.twelve_hour);
+        assert!(c.attractors[0].image.is_none());
+    }
+
+    #[test]
+    fn attractor_needs_one_source() {
+        let dir = std::env::temp_dir().join(format!("sandlock-config-{}", std::process::id()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let path = dir.join("config.toml");
+        for text in ["[[attractor]]\n", "[[attractor]]\nimage = \"/x.png\"\nclock = {}\n"] {
+            std::fs::write(&path, text).unwrap();
+            assert!(load(&path).is_err(), "{text:?} was accepted");
+        }
     }
 
     #[test]

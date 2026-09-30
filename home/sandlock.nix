@@ -35,6 +35,16 @@ in {
   };
 
   config = {
+    # The time emerges from the storm below the centre of the largest output
+    # (hosts add their own attractors to this list).
+    programs.sandlock.settings.attractor = [
+      {
+        clock = {};
+        position = [0.5 0.72];
+        scale = 2.4;
+      }
+    ];
+
     xdg.configFile."sandlock/config.toml" = lib.mkIf (cfg.settings != {}) {
       source = toml.generate "sandlock-config.toml" cfg.settings;
     };

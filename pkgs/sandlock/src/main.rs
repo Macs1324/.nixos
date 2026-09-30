@@ -89,7 +89,7 @@ impl Role {
 struct Screen {
     output: usize,
     role: Role,
-    _viewport: Option<WpViewport>,
+    viewport: Option<WpViewport>,
     configured: bool,
     gfx: Option<OutputGfx>,
     /// A frame callback is outstanding: the compositor has not asked for the
@@ -202,12 +202,22 @@ fn main() -> anyhow::Result<()> {
             config::Config::default()
         }
     };
-    let Some(_instance) = daemon::single_instance()? else {
-        log::info!("sandlock is already running");
-        return Ok(());
+    let lock_mode = daemonize && !preview;
+    let mut instance = match daemon::single_instance(lock_mode)? {
+        daemon::Start::Run(instance) => instance,
+        daemon::Start::AlreadyLocked => {
+            log::info!("the session is already locked by sandlock");
+            return Ok(());
+        }
+        // `-f` promises a locked session: fail so the caller's fallback locks.
+        daemon::Start::Busy if lock_mode => bail!("another sandlock is running but has not locked"),
+        daemon::Start::Busy => {
+            log::info!("sandlock is already running");
+            return Ok(());
+        }
     };
     // Fork before anything spawns a thread; the parent returns once locked.
-    let mut ready = if daemonize && !preview {
+    let mut ready = if lock_mode {
         daemon::daemonize()?
     } else {
         daemon::Ready::none()
@@ -294,17 +304,21 @@ fn main() -> anyhow::Result<()> {
             levels: img.as_ref().map_or([20.0, 60.0, 200.0], |i| attract::levels(&i.bgra)),
         })
         .collect();
-    let targets: Vec<_> = config
-        .attractors
-        .iter()
-        .filter_map(|a| match attract::load(a, &named, primary) {
-            Ok(t) => Some((t, a.emerge, a.reach)),
-            Err(e) => {
-                log::error!("attractor {}: {e:#}", a.image.display());
-                None
-            }
-        })
-        .collect();
+    let mut targets = Vec::new();
+    let mut clocks = Vec::new();
+    for a in &config.attractors {
+        match attract::load(a, &named, primary) {
+            Ok(attract::Loaded::Still(t)) => targets.push((t, a.emerge, a.reach)),
+            Ok(attract::Loaded::Clock(mut clock)) => match clock.update() {
+                Some(t) => {
+                    targets.push((t, a.emerge, a.reach));
+                    clocks.push(clock);
+                }
+                None => log::error!("clock: cannot read the local time"),
+            },
+            Err(e) => log::error!("attractor {}: {e:#}", a.describe()),
+        }
+    }
     if !targets.is_empty() {
         sim.set_targets(&gpu, &targets);
     }
@@ -346,7 +360,7 @@ fn main() -> anyhow::Result<()> {
             app.screens.push(Screen {
                 output: i,
                 role: Role::Lock(lock_surface),
-                _viewport: viewport,
+                viewport,
                 configured: false,
                 gfx: None,
                 waiting: None,
@@ -381,12 +395,15 @@ fn main() -> anyhow::Result<()> {
 
     // ---- the storm -----------------------------------------------------------
     let (auth_tx, auth_rx) = mpsc::channel::<bool>();
-    let mut password: Vec<u8> = Vec::new();
+    // Preallocated so typing never reallocates, which would leave copies of
+    // the password behind in freed memory.
+    let mut password: Vec<u8> = Vec::with_capacity(1024);
     let mut last = Instant::now();
     let mut backlog = 0.0f32;
     let mut frames = 0u32;
     let mut stats_since = Instant::now();
     let mut last_shown = Instant::now();
+    let mut announced = false;
     loop {
         // Short waits keep input responsive whether or not frames are due.
         event_loop.dispatch(Duration::from_millis(2), &mut app)?;
@@ -400,7 +417,9 @@ fn main() -> anyhow::Result<()> {
             }
             match key {
                 Key::Char(s) => {
-                    password.extend_from_slice(s.as_bytes());
+                    let mut s = s.into_bytes();
+                    password.extend_from_slice(&s);
+                    wipe(&mut s);
                     storm.typed();
                 }
                 Key::Backspace => {
@@ -439,6 +458,12 @@ fn main() -> anyhow::Result<()> {
             log::trace!("pointer at {at:?}{}", if entered { " (entered)" } else { "" });
             storm.pointer(at, entered);
         }
+        // Live attractors: only a changed time touches the targets.
+        for clock in &mut clocks {
+            if let Some(t) = clock.update() {
+                sim.update_target(&gpu, &t);
+            }
+        }
         if let Ok(ok) = auth_rx.try_recv() {
             if ok {
                 storm.correct()
@@ -475,8 +500,10 @@ fn main() -> anyhow::Result<()> {
         if drew {
             last_shown = now;
             frames += 1;
-            if app.locked {
+            if app.locked && !announced {
+                instance.mark_locked();
                 ready.signal();
+                announced = true;
             }
         }
         if stats_since.elapsed() >= Duration::from_secs(2) {
@@ -503,6 +530,7 @@ fn main() -> anyhow::Result<()> {
 
     // ---- handoff: the reassembled desktop fades into the live one ------------
     if !preview {
+        instance.mark_unlocked();
         handoff(
             &mut app,
             &mut event_loop,
@@ -627,27 +655,16 @@ fn handoff(
     outputs: &[Output],
     places: &[Place],
 ) -> anyhow::Result<()> {
-    let mut overlays = Vec::new();
-    if app.layer_shell.is_some() {
-        for (i, out) in outputs.iter().enumerate() {
-            overlays.push(app.layer_screen(qh, i, &out.wl, KeyboardInteractivity::None, &out.info)?);
-        }
-        let deadline = Instant::now() + Duration::from_secs(1);
-        while !overlays.iter().all(|s: &Screen| s.configured) && Instant::now() < deadline {
-            // Overlay configures arrive through the same handler as screens.
-            std::mem::swap(&mut app.screens, &mut overlays);
-            event_loop.dispatch(Duration::from_millis(10), app)?;
-            std::mem::swap(&mut app.screens, &mut overlays);
-        }
-        overlays.retain(|s| s.configured);
-        sim.rasterize(gpu);
-        for overlay in &mut overlays {
-            let mut gfx = make_gfx(gpu, sim, display, overlay, places[overlay.output], true)?;
-            gfx.render(gpu, sim, 1.0, &[], 0.0);
-            overlay.gfx = Some(gfx);
-        }
-        app.conn.roundtrip()?;
-    }
+    // The password was right: nothing below may stop the unlock, so the
+    // overlays (only the fade) are best-effort.
+    let overlays = if app.layer_shell.is_some() {
+        handoff_overlays(app, event_loop, qh, gpu, sim, display, outputs, places).unwrap_or_else(|e| {
+            log::error!("unlock overlays: {e:#}; unlocking without the fade");
+            Vec::new()
+        })
+    } else {
+        Vec::new()
+    };
     if let Some(lock) = app.lock.take() {
         lock.unlock();
     }
@@ -655,6 +672,42 @@ fn handoff(
     // Lock surfaces go; the overlays take over for the fade.
     app.screens = overlays;
     Ok(())
+}
+
+/// Overlays showing the reassembled desktop, drawn and committed.
+#[allow(clippy::too_many_arguments)]
+fn handoff_overlays(
+    app: &mut App,
+    event_loop: &mut EventLoop<App>,
+    qh: &QueueHandle<App>,
+    gpu: &Gpu,
+    sim: &Sim,
+    display: NonNull<std::ffi::c_void>,
+    outputs: &[Output],
+    places: &[Place],
+) -> anyhow::Result<Vec<Screen>> {
+    let mut overlays = Vec::new();
+    for (i, out) in outputs.iter().enumerate() {
+        overlays.push(app.layer_screen(qh, i, &out.wl, KeyboardInteractivity::None, &out.info)?);
+    }
+    let deadline = Instant::now() + Duration::from_secs(1);
+    let mut result = Ok(());
+    while result.is_ok() && !overlays.iter().all(|s: &Screen| s.configured) && Instant::now() < deadline {
+        // Overlay configures arrive through the same handler as screens.
+        std::mem::swap(&mut app.screens, &mut overlays);
+        result = event_loop.dispatch(Duration::from_millis(10), app);
+        std::mem::swap(&mut app.screens, &mut overlays);
+    }
+    result?;
+    overlays.retain(|s| s.configured);
+    sim.rasterize(gpu);
+    for overlay in &mut overlays {
+        let mut gfx = make_gfx(gpu, sim, display, overlay, places[overlay.output], true)?;
+        gfx.render(gpu, sim, 1.0, &[], 0.0);
+        overlay.gfx = Some(gfx);
+    }
+    app.conn.roundtrip()?;
+    Ok(overlays)
 }
 
 fn fade(
@@ -721,7 +774,7 @@ impl App {
         Ok(Screen {
             output,
             role: Role::Layer(layer),
-            _viewport: viewport,
+            viewport,
             configured: false,
             gfx: None,
             waiting: None,
@@ -735,6 +788,16 @@ impl App {
             if screen.role.wl_surface() == surface {
                 screen.configured = true;
                 screen.logical = [size.0, size.1];
+                // A lock surface's size must match its configure exactly, and
+                // it can change while locked (a new mode, rotation): scale the
+                // buffer to whatever was asked for rather than to the size the
+                // output had at startup.
+                if let Some(viewport) = &screen.viewport
+                    && size.0 > 0
+                    && size.1 > 0
+                {
+                    viewport.set_destination(size.0 as i32, size.1 as i32);
+                }
             }
         }
     }

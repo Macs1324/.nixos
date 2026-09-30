@@ -132,6 +132,8 @@
       inputsFrom = [sandlock];
       packages = with pkgs; [cargo rustc clippy rustfmt rust-analyzer];
       LD_LIBRARY_PATH = lib.makeLibraryPath (with pkgs; [vulkan-loader libGL wayland libxkbcommon]);
+      # Lets `cargo test` run the PAM conversation test (skipped without it).
+      SANDLOCK_TEST_PAM_LIB = "${pkgs.linux-pam}/lib/security";
     };
 
     # Flake checking normally ignores custom homeConfigurations outputs.

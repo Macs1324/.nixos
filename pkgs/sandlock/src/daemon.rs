@@ -1,38 +1,106 @@
 //! Process plumbing: one sandlock at a time, and `-f` (fork once locked) so
 //! callers such as a before-sleep hook can wait for the lock to be in place.
 
-use std::ffi::c_int;
+use std::ffi::{c_int, c_short};
 use std::fs::File;
+use std::io::{Read, Seek, Write};
 use std::os::fd::{AsRawFd, FromRawFd, OwnedFd};
+use std::time::{Duration, Instant};
 
 const LOCK_EX: c_int = 2;
 const LOCK_NB: c_int = 4;
+const POLLIN: c_short = 1;
+
+/// How long `-f` waits for the session to be locked before giving up, so the
+/// caller's fallback still gets to lock before logind's suspend delay
+/// (InhibitDelayMaxSec, 5 s by default) runs out.
+const LOCK_TIMEOUT: Duration = Duration::from_secs(4);
+
+#[repr(C)]
+struct PollFd {
+    fd: c_int,
+    events: c_short,
+    revents: c_short,
+}
 
 unsafe extern "C" {
     fn flock(fd: c_int, operation: c_int) -> c_int;
     fn pipe(fds: *mut c_int) -> c_int;
     fn fork() -> c_int;
     fn setsid() -> c_int;
+    fn poll(fds: *mut PollFd, nfds: u64, timeout: c_int) -> c_int;
     fn _exit(status: c_int) -> !;
 }
 
 /// Held for the process lifetime; dropping it releases the instance lock.
-pub(crate) struct Instance(#[allow(dead_code)] File);
+/// The file's content says whether the session is locked ("L") or not
+/// (empty), for other instances waiting on this one.
+pub(crate) struct Instance(File);
 
-/// Returns `None` if another sandlock already holds the lock.
-pub(crate) fn single_instance() -> anyhow::Result<Option<Instance>> {
-    let dir = std::env::var_os("XDG_RUNTIME_DIR").unwrap_or_else(|| "/tmp".into());
+impl Instance {
+    fn set(&mut self, locked: bool) {
+        let result = self.0.set_len(0).and_then(|()| {
+            self.0.rewind()?;
+            if locked { self.0.write_all(b"L") } else { Ok(()) }
+        });
+        if let Err(e) = result {
+            log::warn!("instance file: {e}");
+        }
+    }
+
+    pub(crate) fn mark_locked(&mut self) {
+        self.set(true);
+    }
+
+    pub(crate) fn mark_unlocked(&mut self) {
+        self.set(false);
+    }
+}
+
+/// Outcome of trying to become the one running sandlock.
+pub(crate) enum Start {
+    /// This process owns the lock and should run.
+    Run(Instance),
+    /// Another sandlock holds the session locked.
+    AlreadyLocked,
+    /// Another sandlock is running but has not locked (it is starting up,
+    /// fading out, or previewing).
+    Busy,
+}
+
+/// Becomes the single sandlock instance. With `wait`, a running instance that
+/// has not locked yet is given `LOCK_TIMEOUT` to lock (or exit, in which case
+/// this process takes over) before `Busy` is returned.
+pub(crate) fn single_instance(wait: bool) -> anyhow::Result<Start> {
+    // Not /tmp: another user could create the file there first and hold it.
+    let dir = std::env::var_os("XDG_RUNTIME_DIR")
+        .ok_or_else(|| anyhow::anyhow!("XDG_RUNTIME_DIR is not set"))?;
     let path = std::path::Path::new(&dir).join("sandlock.lock");
-    let file = File::options()
+    let mut file = File::options()
         .create(true)
         .truncate(false)
+        .read(true)
         .write(true)
         .open(&path)?;
-    // SAFETY: plain syscall on an fd we own.
-    if unsafe { flock(file.as_raw_fd(), LOCK_EX | LOCK_NB) } != 0 {
-        return Ok(None);
+    let deadline = Instant::now() + LOCK_TIMEOUT;
+    loop {
+        // SAFETY: plain syscall on an fd we own.
+        if unsafe { flock(file.as_raw_fd(), LOCK_EX | LOCK_NB) } == 0 {
+            let mut instance = Instance(file);
+            // A previous instance may have died while locked.
+            instance.mark_unlocked();
+            return Ok(Start::Run(instance));
+        }
+        let mut state = [0u8; 1];
+        let locked = file.rewind().and_then(|()| file.read(&mut state)).is_ok_and(|n| n == 1 && state[0] == b'L');
+        if locked {
+            return Ok(Start::AlreadyLocked);
+        }
+        if !wait || Instant::now() >= deadline {
+            return Ok(Start::Busy);
+        }
+        std::thread::sleep(Duration::from_millis(50));
     }
-    Ok(Some(Instance(file)))
 }
 
 /// Tells the waiting parent (if any) that the session is locked.
@@ -45,15 +113,15 @@ impl Ready {
 
     pub(crate) fn signal(&mut self) {
         if let Some(mut pipe) = self.0.take() {
-            use std::io::Write;
             let _ = pipe.write_all(b"L");
         }
     }
 }
 
 /// Forks. The parent waits until the child reports the lock is in place, then
-/// exits 0; if the child dies first it exits 1, so `sandlock -f || fallback`
-/// never leaves a machine unlocked. Must run before any thread is spawned.
+/// exits 0; if the child dies first, or has not locked within `LOCK_TIMEOUT`,
+/// it exits 1, so `sandlock -f || fallback` never leaves a machine unlocked.
+/// Must run before any thread is spawned.
 pub(crate) fn daemonize() -> anyhow::Result<Ready> {
     let mut fds = [0 as c_int; 2];
     // SAFETY: `fds` has room for the two descriptors.
@@ -73,9 +141,24 @@ pub(crate) fn daemonize() -> anyhow::Result<Ready> {
         }
         _ => {
             drop(write);
-            use std::io::Read;
-            let mut byte = [0u8; 1];
-            let locked = File::from(read).read(&mut byte).is_ok_and(|n| n == 1);
+            let deadline = Instant::now() + LOCK_TIMEOUT;
+            let mut pipe = File::from(read);
+            let locked = loop {
+                let left = deadline.saturating_duration_since(Instant::now());
+                let mut fd = PollFd { fd: pipe.as_raw_fd(), events: POLLIN, revents: 0 };
+                // SAFETY: one valid pollfd.
+                match unsafe { poll(&mut fd, 1, left.as_millis() as c_int) } {
+                    0 => {
+                        log::error!("not locked after {LOCK_TIMEOUT:?}; giving up");
+                        break false;
+                    }
+                    n if n < 0 && std::io::Error::last_os_error().kind() == std::io::ErrorKind::Interrupted => {}
+                    _ => {
+                        let mut byte = [0u8; 1];
+                        break pipe.read(&mut byte).is_ok_and(|n| n == 1);
+                    }
+                }
+            };
             // SAFETY: the parent only waited on the pipe; exit without
             // running destructors shared with the child.
             unsafe { _exit(if locked { 0 } else { 1 }) }

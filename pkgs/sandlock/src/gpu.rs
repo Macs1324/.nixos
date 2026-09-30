@@ -130,6 +130,12 @@ impl Gpu {
             ..Default::default()
         }))
         .context("requesting GPU device")?;
+        // wgpu panics on uncaptured errors by default, and a crash while
+        // locked leaves the session locked with nobody to unlock it (e.g. a
+        // device lost across suspend). Log instead: frames may stop, but
+        // typing the password still unlocks.
+        device.on_uncaptured_error(std::sync::Arc::new(|e| log::error!("GPU: {e}")));
+        device.set_device_lost_callback(|reason, why| log::error!("GPU device lost ({reason:?}): {why}"));
         Ok(Self {
             instance,
             adapter,
@@ -772,21 +778,7 @@ impl Sim {
         let mut slots = vec![0u8; targets.len().max(1) * RECT_SLOT as usize];
         self.rects.clear();
         for (k, (t, emerge, reach)) in targets.iter().enumerate() {
-            gpu.queue.write_texture(
-                wgpu::TexelCopyTextureInfo {
-                    texture: &self.targets_tex,
-                    mip_level: 0,
-                    origin: wgpu::Origin3d { x: t.origin[0], y: t.origin[1], z: 0 },
-                    aspect: wgpu::TextureAspect::All,
-                },
-                &t.rgba,
-                wgpu::TexelCopyBufferLayout {
-                    offset: 0,
-                    bytes_per_row: Some(t.size[0] * 4),
-                    rows_per_image: Some(t.size[1]),
-                },
-                wgpu::Extent3d { width: t.size[0], height: t.size[1], depth_or_array_layers: 1 },
-            );
+            self.update_target(gpu, t);
             let rect = RectUniform {
                 origin: t.origin,
                 size: t.size,
@@ -815,6 +807,27 @@ impl Sim {
                 }),
             }],
         }));
+    }
+
+    /// Rewrites one installed target's pixels (same rectangle as installed by
+    /// `set_targets`): recruiting then frees the grains of pixels that stopped
+    /// being targets and finds grains for new ones.
+    pub(crate) fn update_target(&self, gpu: &Gpu, t: &crate::attract::Target) {
+        gpu.queue.write_texture(
+            wgpu::TexelCopyTextureInfo {
+                texture: &self.targets_tex,
+                mip_level: 0,
+                origin: wgpu::Origin3d { x: t.origin[0], y: t.origin[1], z: 0 },
+                aspect: wgpu::TextureAspect::All,
+            },
+            &t.rgba,
+            wgpu::TexelCopyBufferLayout {
+                offset: 0,
+                bytes_per_row: Some(t.size[0] * 4),
+                rows_per_image: Some(t.size[1]),
+            },
+            wgpu::Extent3d { width: t.size[0], height: t.size[1], depth_or_array_layers: 1 },
+        );
     }
 
     /// Rebuilds the owner buffer from the current grain positions: one pass

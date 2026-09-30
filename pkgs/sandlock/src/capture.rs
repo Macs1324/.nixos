@@ -83,6 +83,9 @@ impl Capture {
         else {
             return self.fail("compositor offered no shm buffer");
         };
+        if (stride as usize) < width as usize * 4 {
+            return self.fail(&format!("stride {stride} too small for width {width}"));
+        }
         let size = stride as usize * height as usize;
         let mut pool = match RawPool::new(size, shm) {
             Ok(pool) => pool,
