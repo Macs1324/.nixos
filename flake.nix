@@ -46,6 +46,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # GRUB themes with a NixOS module (boot.loader.grub2-theme).
+    grub2-themes = {
+      url = "github:vinceliuice/grub2-themes";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Tracks Claude Code releases within hours; nixpkgs lags by days.
     llm-agents = {
       url = "github:numtide/llm-agents.nix";
@@ -94,6 +100,7 @@
         modules = [
           inputs.stylix.nixosModules.stylix
           inputs.niri.nixosModules.niri
+          inputs.grub2-themes.nixosModules.default
           (./hosts + "/${host}")
         ];
       });

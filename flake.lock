@@ -265,6 +265,26 @@
         "type": "gitlab"
       }
     },
+    "grub2-themes": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1788271742,
+        "narHash": "sha256-H4IIqM+fmq9t3ZPHGs9kiuoQzau9AhCGQBSfClqQ/44=",
+        "owner": "vinceliuice",
+        "repo": "grub2-themes",
+        "rev": "4c5a77125b93f833edc9bf7b14a899faa8ac79c6",
+        "type": "github"
+      },
+      "original": {
+        "owner": "vinceliuice",
+        "repo": "grub2-themes",
+        "type": "github"
+      }
+    },
     "home-manager": {
       "inputs": {
         "nixpkgs": [
@@ -891,6 +911,7 @@
     },
     "root": {
       "inputs": {
+        "grub2-themes": "grub2-themes",
         "home-manager": "home-manager",
         "hyprland": "hyprland",
         "llm-agents": "llm-agents",
