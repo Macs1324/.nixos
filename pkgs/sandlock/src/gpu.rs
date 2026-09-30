@@ -163,6 +163,69 @@ impl Gpu {
     }
 }
 
+/// The canvas no output covers, as rectangles: the cells of the grid that
+/// every output edge cuts the canvas into, where no output is.
+fn offscreen(canvas: [u32; 2], places: &[Place]) -> Vec<Place> {
+    let cuts = |axis: usize, end: u32| {
+        let mut v: Vec<u32> = places
+            .iter()
+            .flat_map(|p| [p.origin[axis], p.origin[axis] + p.size[axis]])
+            .chain([0, end])
+            .filter(|&c| c <= end)
+            .collect();
+        v.sort_unstable();
+        v.dedup();
+        v
+    };
+    let (xs, ys) = (cuts(0, canvas[0]), cuts(1, canvas[1]));
+    let mut rects = Vec::new();
+    for y in ys.windows(2) {
+        for x in xs.windows(2) {
+            let covered = places.iter().any(|p| {
+                (p.origin[0]..p.origin[0] + p.size[0]).contains(&x[0])
+                    && (p.origin[1]..p.origin[1] + p.size[1]).contains(&y[0])
+            });
+            if !covered {
+                rects.push(Place { origin: [x[0], y[0]], size: [x[1] - x[0], y[1] - y[0]] });
+            }
+        }
+    }
+    rects
+}
+
+/// BGRA pixels for an offscreen rectangle: each pixel takes the colour of
+/// its mirror image across the edge of the nearest output (black where that
+/// output has no screenshot).
+fn mirrored(r: Place, places: &[Place], images: &[Option<Image>]) -> Vec<u8> {
+    let mut out = vec![0u8; (r.size[0] * r.size[1] * 4) as usize];
+    for y in 0..r.size[1] {
+        for x in 0..r.size[0] {
+            let p = [i64::from(r.origin[0] + x), i64::from(r.origin[1] + y)];
+            // Nearest output, and the nearest point in it.
+            let nearest = places.iter().zip(images).min_by_key(|(o, _)| {
+                let q = clamp_into(p, o);
+                (q[0] - p[0]).pow(2) + (q[1] - p[1]).pow(2)
+            });
+            let Some((o, Some(img))) = nearest else { continue };
+            // Reflect across the edge line (between the last pixel inside
+            // and the first outside), not across the last pixel.
+            let q = clamp_into(p, o);
+            let m = clamp_into([0, 1].map(|a| 2 * q[a] - p[a] + (p[a] - q[a]).signum()), o);
+            let (ix, iy) = ((m[0] - i64::from(o.origin[0])) as u32, (m[1] - i64::from(o.origin[1])) as u32);
+            if ix < img.width && iy < img.height {
+                let src = ((iy * img.width + ix) * 4) as usize;
+                let dst = ((y * r.size[0] + x) * 4) as usize;
+                out[dst..dst + 4].copy_from_slice(&img.bgra[src..src + 4]);
+            }
+        }
+    }
+    out
+}
+
+fn clamp_into(p: [i64; 2], o: &Place) -> [i64; 2] {
+    [0, 1].map(|a| p[a].clamp(i64::from(o.origin[a]), i64::from(o.origin[a] + o.size[a]) - 1))
+}
+
 // ---- bind group layout helpers ----------------------------------------------
 
 fn entry(
@@ -289,10 +352,8 @@ pub(crate) struct Sim {
     grid: [u32; 2],
     params_buf: wgpu::Buffer,
     splats_buf: wgpu::Buffer,
-    pub(crate) outs_buf: wgpu::Buffer,
     /// Owned here; the passes reach it through their bind groups.
     _grains: wgpu::Buffer,
-    pub(crate) shot: wgpu::TextureView,
     pub(crate) n_outputs: u32,
     advect: Pass,
     splat: Pass,
@@ -309,6 +370,10 @@ pub(crate) struct Sim {
     /// every frame by `rasterize`.
     pub(crate) owner: wgpu::Buffer,
     scatter: Pass,
+    /// Each pixel's owner packed with its colour and sub-pixel position
+    /// (render.wgsl `pack`): what the outputs splat.
+    pub(crate) packed: wgpu::Buffer,
+    pack: Pass,
     render_module: wgpu::ShaderModule,
     pub(crate) canvas: [u32; 2],
     targets_tex: wgpu::Texture,
@@ -394,11 +459,35 @@ impl Sim {
                 },
             );
         }
+        // Canvas no output covers (e.g. below a smaller monitor) gets grains
+        // too, coloured like the nearest output mirrored across its edge:
+        // left empty, the storm would stir that emptiness into the screens
+        // as black streaks. Nobody sees these grains at home.
+        let hidden = offscreen(canvas, places);
+        for r in &hidden {
+            let bgra = mirrored(*r, places, images);
+            gpu.queue.write_texture(
+                wgpu::TexelCopyTextureInfo {
+                    texture: &shot_tex,
+                    mip_level: 0,
+                    origin: wgpu::Origin3d { x: r.origin[0], y: r.origin[1], z: 0 },
+                    aspect: wgpu::TextureAspect::All,
+                },
+                &bgra,
+                wgpu::TexelCopyBufferLayout {
+                    offset: 0,
+                    bytes_per_row: Some(r.size[0] * 4),
+                    rows_per_image: Some(r.size[1]),
+                },
+                wgpu::Extent3d { width: r.size[0], height: r.size[1], depth_or_array_layers: 1 },
+            );
+        }
         let shot = shot_tex.create_view(&Default::default());
 
-        let mut rects = Vec::with_capacity(places.len());
+        // Grains in home order: the outputs, then the offscreen rectangles.
+        let mut rects = Vec::with_capacity(places.len() + hidden.len());
         let mut n_grains: u64 = 0;
-        for place in places {
+        for place in places.iter().chain(&hidden) {
             rects.push(OutRect {
                 origin: [place.origin[0] as f32, place.origin[1] as f32],
                 size: [place.size[0] as f32, place.size[1] as f32],
@@ -444,7 +533,7 @@ impl Sim {
             dissipation: 0.3,
             unit: canvas[1] as f32 / 1440.0,
             n_grains: n_grains as u32,
-            n_outputs: places.len() as u32,
+            n_outputs: rects.len() as u32,
             splat_count: 0,
             cell_x,
             seed: 0,
@@ -691,6 +780,38 @@ impl Sim {
                 ],
             }),
         };
+        let packed = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("packed"),
+            size: u64::from(canvas[0]) * u64::from(canvas[1]) * 4,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_SRC,
+            mapped_at_creation: false,
+        });
+        let pack_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("pack"),
+            entries: &[
+                entry(0, cs, uniform()),
+                entry(1, cs, storage(true)),
+                entry(2, cs, storage(false)),
+                entry(4, cs, storage(true)),
+                entry(5, cs, texture(UNFILTERED)),
+                entry(6, cs, storage(false)),
+            ],
+        });
+        let pack = Pass {
+            pipeline: compute(device, &render_module, "pack", &[&pack_layout]),
+            group: device.create_bind_group(&wgpu::BindGroupDescriptor {
+                label: Some("pack"),
+                layout: &pack_layout,
+                entries: &[
+                    bind(0, params_buf.as_entire_binding()),
+                    bind(1, grains.as_entire_binding()),
+                    bind(2, owner.as_entire_binding()),
+                    bind(4, outs_buf.as_entire_binding()),
+                    bind(5, tv(&shot)),
+                    bind(6, packed.as_entire_binding()),
+                ],
+            }),
+        };
 
         let attract_module = module(device, "attract", ATTRACT);
         let recruit_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
@@ -739,9 +860,7 @@ impl Sim {
             grid,
             params_buf,
             splats_buf,
-            outs_buf,
             _grains: grains,
-            shot,
             n_outputs: places.len() as u32,
             advect,
             splat,
@@ -756,6 +875,8 @@ impl Sim {
             grain_groups,
             owner,
             scatter,
+            packed,
+            pack,
             render_module,
             canvas,
             targets_tex,
@@ -829,8 +950,9 @@ impl Sim {
         );
     }
 
-    /// Rebuilds the owner buffer from the current grain positions: one pass
-    /// for all outputs, run once per frame before they compose.
+    /// Rebuilds the owner and packed buffers from the current grain
+    /// positions: one pass each for all outputs, run once per frame before
+    /// they compose.
     pub(crate) fn rasterize(&self, gpu: &Gpu) {
         let mut encoder = gpu.device.create_command_encoder(&Default::default());
         encoder.clear_buffer(&self.owner, 0, None);
@@ -839,6 +961,12 @@ impl Sim {
             cpass.set_pipeline(&self.scatter.pipeline);
             cpass.set_bind_group(0, &self.scatter.group, &[]);
             cpass.dispatch_workgroups(self.grain_groups[0], self.grain_groups[1], 1);
+            cpass.set_pipeline(&self.pack.pipeline);
+            cpass.set_bind_group(0, &self.pack.group, &[]);
+            // Per pixel: the owner is read in order and every pixel written,
+            // so no clear is needed. (Per grain, writing only the winners,
+            // measured slower: 2.7 vs 1.9 ms for the whole rasterize.)
+            cpass.dispatch_workgroups(self.canvas[0].div_ceil(16), self.canvas[1].div_ceil(16), 1);
         }
         gpu.queue.submit([encoder.finish()]);
     }
@@ -848,6 +976,13 @@ impl Sim {
     pub(crate) fn read_owner(&self, gpu: &Gpu) -> anyhow::Result<Vec<u32>> {
         let [w, h] = self.canvas;
         read_back(gpu, &self.owner, u64::from(w) * u64::from(h) * 4)
+    }
+
+    /// Reads the packed buffer back (see render.wgsl `pack`). Blocks on the
+    /// GPU: for statistics only.
+    pub(crate) fn read_packed(&self, gpu: &Gpu) -> anyhow::Result<Vec<u32>> {
+        let [w, h] = self.canvas;
+        read_back(gpu, &self.packed, u64::from(w) * u64::from(h) * 4)
     }
 
     /// Debug statistic: share of canvas pixels with no grain (before gap
@@ -987,21 +1122,14 @@ impl Compose {
         let fs = wgpu::ShaderStages::FRAGMENT;
         let layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
             label: Some("compose"),
-            entries: &[
-                entry(0, fs, uniform()),
-                entry(1, fs, storage(true)),
-                entry(2, fs, storage(true)),
-                entry(3, fs, texture(UNFILTERED)),
-            ],
+            entries: &[entry(0, fs, uniform()), entry(2, fs, storage(true))],
         });
         let group = device.create_bind_group(&wgpu::BindGroupDescriptor {
             label: Some("compose"),
             layout: &layout,
             entries: &[
                 wgpu::BindGroupEntry { binding: 0, resource: view_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 1, resource: sim.outs_buf.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 2, resource: sim.owner.as_entire_binding() },
-                wgpu::BindGroupEntry { binding: 3, resource: wgpu::BindingResource::TextureView(&sim.shot) },
+                wgpu::BindGroupEntry { binding: 2, resource: sim.packed.as_entire_binding() },
             ],
         });
         // The module's group 0 belongs to the scatter pass; compose uses group 1.
@@ -1161,6 +1289,32 @@ impl OutputGfx {
 #[cfg(test)]
 mod tests {
     use super::*;
+
+    #[test]
+    fn offscreen_is_what_no_output_covers() {
+        // 2560x1440 next to 1920x1080, top-aligned: one strip under the
+        // smaller monitor.
+        let places = [
+            Place { origin: [0, 0], size: [2560, 1440] },
+            Place { origin: [2560, 0], size: [1920, 1080] },
+        ];
+        let r = offscreen([4480, 1440], &places);
+        assert_eq!(r.len(), 1);
+        assert_eq!((r[0].origin, r[0].size), ([2560, 1080], [1920, 360]));
+        assert!(offscreen([2560, 1440], &places[..1]).is_empty());
+    }
+
+    #[test]
+    fn offscreen_mirrors_the_nearest_output() {
+        let places = [Place { origin: [0, 0], size: [4, 2] }];
+        // Rows: 0..7 in blue.
+        let bgra = (0..8u8).flat_map(|v| [v, 0, 0, 255]).collect();
+        let images = [Some(Image { width: 4, height: 2, bgra })];
+        // Two rows below: the first mirrors row 1, the second row 0.
+        let px = mirrored(Place { origin: [0, 2], size: [4, 2] }, &places, &images);
+        let blue: Vec<u8> = px.chunks(4).map(|p| p[0]).collect();
+        assert_eq!(blue, [4, 5, 6, 7, 0, 1, 2, 3]);
+    }
 
     /// Every shader module parses and validates, as `module` builds it.
     #[test]

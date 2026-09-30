@@ -64,6 +64,25 @@ impl Scene {
         }
     }
 
+    /// `frame`, waiting for the GPU after each phase: how long the
+    /// simulation step, the rasterize (scatter + pack) and the compose of
+    /// every output take.
+    fn frame_phases(&mut self) -> anyhow::Result<[Duration; 3]> {
+        let t0 = Instant::now();
+        let splats = self.storm.step(DT, &mut self.sim.params);
+        self.sim.step(&self.gpu, DT, &splats);
+        self.wait()?;
+        let t1 = Instant::now();
+        self.sim.rasterize(&self.gpu);
+        self.wait()?;
+        let t2 = Instant::now();
+        for (compose, _, target) in &self.outputs {
+            compose.draw(&self.gpu, &self.sim, target, 1.0, &[], 0.0);
+        }
+        self.wait()?;
+        Ok([t1 - t0, t2 - t1, t2.elapsed()])
+    }
+
     fn wait(&self) -> anyhow::Result<()> {
         self.gpu.device.poll(wgpu::PollType::wait_indefinitely())?;
         Ok(())
@@ -135,8 +154,8 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
     println!("original roughness {original:.2} (mean |Δluma| between neighbours)");
     println!();
     println!(
-        "{:>6}  {:>7}  {:>8}  {:>9}  {:>10}  {:>9}  {:>7}",
-        "t (s)", "holes", "at home", "roughness", "vs orig.", "offscreen", "hidden"
+        "{:>6}  {:>7}  {:>8}  {:>9}  {:>10}  {:>9}  {:>7}  {:>15}  {:>15}",
+        "t (s)", "holes", "at home", "roughness", "vs orig.", "offscreen", "hidden", "2px edge/inner", "black edge/inner"
     );
 
     // Unpaced: GPU cost per frame, and the picture at the checkpoints.
@@ -157,9 +176,12 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
             let m = measure(&owner, canvas, &images, &places);
             // What is actually on screen, gap filling included.
             let mut shown = vec![f32::NAN; owner.len()];
-            for (compose, texture, _) in &scene.outputs {
+            for (k, (compose, texture, _)) in scene.outputs.iter().enumerate() {
                 let p = compose.place;
                 let bgra = read_texture(&scene.gpu, texture, p.size)?;
+                if let Some(dir) = std::env::var_os("SANDLOCK_BENCH_DUMP") {
+                    dump(&PathBuf::from(dir).join(format!("t{t:02.0}-out{}.png", k + 1)), p.size, &bgra)?;
+                }
                 for y in 0..p.size[1] {
                     for x in 0..p.size[0] {
                         let o = ((y * p.size[0] + x) * 4) as usize;
@@ -168,14 +190,19 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
                 }
             }
             let rough = roughness(&shown, canvas);
+            let sp = splats(&scene.sim.read_packed(&scene.gpu)?, canvas, &places);
             println!(
-                "{t:>6.0}  {:>6.2}%  {:>7.1}%  {:>9.2}  {:>9.2}x  {:>8.2}%  {:>6.2}%",
+                "{t:>6.0}  {:>6.2}%  {:>7.1}%  {:>9.2}  {:>9.2}x  {:>8.2}%  {:>6.2}%  {:>6.1}%/{:>6.1}%  {:>6.2}%/{:>6.2}%",
                 m.holes * 100.0,
                 m.home * 100.0,
                 rough,
                 rough / original.max(1e-6),
                 m.offscreen * 100.0,
-                m.hidden * 100.0
+                m.hidden * 100.0,
+                sp.wide[0] * 100.0,
+                sp.wide[1] * 100.0,
+                sp.black[0] * 100.0,
+                sp.black[1] * 100.0
             );
         }
     }
@@ -193,6 +220,17 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
             mean / (1000.0 / 60.0) * 100.0
         );
     }
+
+    // Where the time goes (the waits between phases add a little).
+    let mut phases = [Duration::ZERO; 3];
+    const SPLIT: u32 = 300;
+    for _ in 0..SPLIT {
+        for (sum, d) in phases.iter_mut().zip(scene.frame_phases()?) {
+            *sum += d;
+        }
+    }
+    let [step, raster, compose] = phases.map(|d| d.as_secs_f64() * 1000.0 / f64::from(SPLIT));
+    println!("phases: step {step:.2} ms, rasterize {raster:.2} ms, compose {compose:.2} ms");
 
     if opts.paced > 0.0 {
         paced(&mut scene, opts.paced)?;
@@ -246,8 +284,10 @@ fn measure(owner: &[u32], canvas: [u32; 2], images: &[Image], places: &[Place]) 
                 if id == 0 {
                     continue;
                 }
-                let Some((h, _)) = grain(id - 1, images, places) else { continue };
                 filled += 1;
+                // Grains from the offscreen canvas have no screenshot here:
+                // on screen, never at home.
+                let Some((h, _)) = grain(id - 1, images, places) else { continue };
                 let (dx, dy) = (h[0] - i64::from(x), h[1] - i64::from(y));
                 home += u64::from(dx * dx + dy * dy <= NEAR * NEAR);
             }
@@ -260,6 +300,68 @@ fn measure(owner: &[u32], canvas: [u32; 2], images: &[Image], places: &[Place]) 
         holes: 1.0 - filled as f32 / pixels.max(1) as f32,
         home: home as f32 / filled.max(1) as f32,
     }
+}
+
+/// Output pixels closer than this to an output edge count as "edge".
+const EDGE: u32 = 40;
+
+/// How pixels were splatted (render.wgsl `compose_fs`), each as (near an
+/// output edge, interior) shares: no grain within 1 px (a soft 2 px splat),
+/// and none within 2 px either (black).
+struct Splats {
+    wide: [f32; 2],
+    black: [f32; 2],
+}
+
+fn splat_weight(packed: &[u32], canvas: [u32; 2], x: u32, y: u32, r: i64) -> f32 {
+    let (w, h) = (canvas[0] as i64, canvas[1] as i64);
+    let mut weight = 0.0f32;
+    for dy in -r..=r {
+        for dx in -r..=r {
+            let (qx, qy) = (i64::from(x) + dx, i64::from(y) + dy);
+            if qx < 0 || qy < 0 || qx >= w || qy >= h {
+                continue;
+            }
+            let v = packed[(qy * w + qx) as usize];
+            if v == 0 {
+                continue;
+            }
+            let at = [((v >> 4) & 15) as f32 - 1.0, (v & 15) as f32 - 1.0].map(|o| o / 14.0);
+            let d = [(dx as f32 + at[0] - 0.5).abs() / r as f32, (dy as f32 + at[1] - 0.5).abs() / r as f32];
+            weight += (1.0 - d[0]).max(0.0) * (1.0 - d[1]).max(0.0);
+        }
+    }
+    weight
+}
+
+fn splats(packed: &[u32], canvas: [u32; 2], places: &[Place]) -> Splats {
+    let (mut n, mut wide, mut black) = ([0u64; 2], [0u64; 2], [0u64; 2]);
+    for p in places {
+        for y in p.origin[1]..p.origin[1] + p.size[1] {
+            for x in p.origin[0]..p.origin[0] + p.size[0] {
+                let (lx, ly) = (x - p.origin[0], y - p.origin[1]);
+                let edge = lx.min(ly).min(p.size[0] - 1 - lx).min(p.size[1] - 1 - ly) < EDGE;
+                let k = usize::from(!edge);
+                n[k] += 1;
+                if splat_weight(packed, canvas, x, y, 1) <= 1e-4 {
+                    wide[k] += 1;
+                    black[k] += u64::from(splat_weight(packed, canvas, x, y, 2) <= 1e-4);
+                }
+            }
+        }
+    }
+    let share = |v: [u64; 2]| [0, 1].map(|k| v[k] as f32 / n[k].max(1) as f32);
+    Splats { wide: share(wide), black: share(black) }
+}
+
+/// Writes a BGRA8 frame as a PNG (`SANDLOCK_BENCH_DUMP=<dir>`).
+fn dump(path: &std::path::Path, size: [u32; 2], bgra: &[u8]) -> anyhow::Result<()> {
+    let file = std::fs::File::create(path).with_context(|| format!("creating {}", path.display()))?;
+    let mut png = png::Encoder::new(std::io::BufWriter::new(file), size[0], size[1]);
+    png.set_color(png::ColorType::Rgb);
+    let rgb: Vec<u8> = bgra.as_chunks::<4>().0.iter().flat_map(|p| [p[2], p[1], p[0]]).collect();
+    png.write_header()?.write_image_data(&rgb)?;
+    Ok(())
 }
 
 /// Reads a rendered BGRA8 output back, rows tightly packed.

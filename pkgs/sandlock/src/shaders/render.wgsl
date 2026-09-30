@@ -1,7 +1,12 @@
 // Rendering: grains are scattered into one canvas-wide "owner" buffer (which
-// grain sits on each pixel), then each output looks its pixels up there. A
-// pixel no grain landed on takes the nearest grain within a few pixels, so
-// every pixel on screen is an original screenshot pixel.
+// grain sits on each pixel), packed with their colour and sub-pixel position
+// ("packed"), then each output splats them: a pixel is the average of the
+// grains around it, weighted by how close each one is to its centre (a tent
+// of 1 px). Moving grains blend smoothly instead of leaving hard-edged holes;
+// a grain resting on a pixel centre, as every grain does at home, gives
+// exactly its own pixel, so the desktop stays pixel-exact. A pixel no grain
+// comes near widens the tent to 2 px. (Splatting every grain, not just each
+// pixel's owner, looked the same and cost 2-3x the GPU time.)
 
 struct View {
     origin: vec2<f32>,    // this output's rectangle in the canvas
@@ -41,24 +46,17 @@ fn scatter(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroup
     atomicMax(&owner_rw[p.y * w + p.x], key);
 }
 
-// ---- compose (per output) ----------------------------------------------------
+// ---- pack (one pass per frame, per canvas pixel) --------------------------------
 
-@group(1) @binding(0) var<uniform> V: View;
-@group(1) @binding(1) var<storage, read> outs: array<OutRect>;
-@group(1) @binding(2) var<storage, read> owner: array<u32>;
-@group(1) @binding(3) var shot: texture_2d<f32>;
-
-// Gaps are the 1-3 px holes of randomly scattered grains; beyond this the
-// pixel shows the nearest grain found so far, or black.
-const SEARCH: i32 = 4;
-
-fn owner_at(p: vec2<i32>) -> u32 {
-    if (p.x < 0 || p.y < 0 || p.x >= i32(V.canvas_w) || p.y >= i32(V.canvas_h)) { return 0u; }
-    return owner[u32(p.y) * V.canvas_w + u32(p.x)] & ID_MASK;
-}
+@group(0) @binding(4) var<storage, read> outs: array<OutRect>;
+@group(0) @binding(5) var shot: texture_2d<f32>;
+// Per canvas pixel, 0 = no grain: its owner's colour (rgb8) and position
+// within the pixel (4 bits per axis, 1..15 so no grain packs to 0; 8 = the
+// centre, where every grain rests at home).
+@group(0) @binding(6) var<storage, read_write> packed_rw: array<u32>;
 
 fn home_of(i: u32) -> vec2<i32> {
-    for (var k = 0u; k < V.n_outputs; k++) {
+    for (var k = 0u; k < P.n_outputs; k++) {
         let o = outs[k];
         let w = u32(o.size.x);
         let n = w * u32(o.size.y);
@@ -68,6 +66,41 @@ fn home_of(i: u32) -> vec2<i32> {
         }
     }
     return vec2<i32>(0);
+}
+
+@compute @workgroup_size(16, 16)
+fn pack(@builtin(global_invocation_id) id: vec3<u32>) {
+    let w = u32(P.canvas.x);
+    if (id.x >= w || id.y >= u32(P.canvas.y)) { return; }
+    let pi = id.y * w + id.x;
+    let o = atomicLoad(&owner_rw[pi]) & ID_MASK;
+    if (o == 0u) {
+        packed_rw[pi] = 0u;
+        return;
+    }
+    let off = clamp(grains[o - 1u].xy - vec2<f32>(id.xy), vec2<f32>(0.0), vec2<f32>(1.0));
+    let q = vec2<u32>(round(off * 14.0)) + 1u;
+    let c = vec3<u32>(round(textureLoad(shot, home_of(o - 1u), 0).rgb * 255.0));
+    packed_rw[pi] = (c.r << 24u) | (c.g << 16u) | (c.b << 8u) | (q.x << 4u) | q.y;
+}
+
+// ---- compose (per output) ----------------------------------------------------
+
+@group(1) @binding(0) var<uniform> V: View;
+@group(1) @binding(2) var<storage, read> packed: array<u32>;
+
+fn packed_at(p: vec2<i32>) -> u32 {
+    if (p.x < 0 || p.y < 0 || p.x >= i32(V.canvas_w) || p.y >= i32(V.canvas_h)) { return 0u; }
+    return packed[u32(p.y) * V.canvas_w + u32(p.x)];
+}
+
+fn colour_of(v: u32) -> vec3<f32> {
+    return vec3<f32>(f32(v >> 24u), f32((v >> 16u) & 255u), f32((v >> 8u) & 255u)) / 255.0;
+}
+
+/// Where the grain packed in `v` sits, relative to its pixel's corner.
+fn offset_of(v: u32) -> vec2<f32> {
+    return (vec2<f32>(f32((v >> 4u) & 15u), f32(v & 15u)) - 1.0) / 14.0;
 }
 
 fn srgb_to_linear(c: vec3<f32>) -> vec3<f32> {
@@ -83,25 +116,26 @@ fn compose_vs(@builtin(vertex_index) i: u32) -> @builtin(position) vec4<f32> {
 @fragment
 fn compose_fs(@builtin(position) frag: vec4<f32>) -> @location(0) vec4<f32> {
     let p = vec2<i32>(V.origin) + vec2<i32>(frag.xy);
-    var id = owner_at(p);
-    // Nearest grain, ring by ring; stop at the first ring that has one.
-    for (var r = 1; r <= SEARCH && id == 0u; r++) {
-        var best = 1e9;
+    // Splat: every grain within 1 px of this pixel's centre, tent-weighted;
+    // if none, within 2 px.
+    var col = vec3<f32>(0.0);
+    for (var r = 1; r <= 2; r++) {
+        var sum = vec3<f32>(0.0);
+        var weight = 0.0;
         for (var dy = -r; dy <= r; dy++) {
             for (var dx = -r; dx <= r; dx++) {
-                if (max(abs(dx), abs(dy)) != r) { continue; }
-                let c = owner_at(p + vec2<i32>(dx, dy));
-                let d = f32(dx * dx + dy * dy);
-                if (c != 0u && d < best) {
-                    best = d;
-                    id = c;
-                }
+                let v = packed_at(p + vec2<i32>(dx, dy));
+                if (v == 0u) { continue; }
+                let d = abs(vec2<f32>(f32(dx), f32(dy)) + offset_of(v) - 0.5) / f32(r);
+                let w = max(1.0 - d.x, 0.0) * max(1.0 - d.y, 0.0);
+                sum += colour_of(v) * w;
+                weight += w;
             }
         }
-    }
-    var col = vec3<f32>(0.0);
-    if (id != 0u) {
-        col = textureLoad(shot, home_of(id - 1u), 0).rgb;
+        if (weight > 1e-4) {
+            col = sum / weight;
+            break;
+        }
     }
     // Password dots: a soft dark halo keeps them readable on any colour.
     let c = V.origin + frag.xy;
