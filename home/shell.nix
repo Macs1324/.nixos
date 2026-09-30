@@ -6,43 +6,27 @@
   };
   # programs.ncspot.enable = true;
 
-  # Fastfetch - Deactivated in favor of pfetch (can be re-enabled anytime)
+  # A small image greeting on every interactive shell. The logo uses the kitty
+  # graphics protocol, so other terminals (and tmux) get the small ASCII logo.
   programs.fastfetch = {
-    enable = false;
+    enable = true;
     settings = {
       logo = {
         type = "kitty";
-        source = "~/.nixos/assets/logo.png";
-        width = 48;
-        height = 19;
+        source = "${../assets/logo.png}";
+        width = 20;
+        height = 9;
+        padding.top = 1;
       };
+      display.separator = "  ";
       modules = [
         "title"
-        "separator"
         "os"
-        {
-          type = "host";
-          format = "{/2}{-}{/}{2}{?3} {3}{?}";
-        }
         "kernel"
         "uptime"
-        {
-          type = "battery";
-          format = "{/4}{-}{/}{4}{?5} [{5}]{?}";
-        }
-        "break"
         "packages"
-        "shell"
-        "display"
-        "terminal"
-        "break"
-        "cpu"
-        {
-          type = "gpu";
-          key = "GPU";
-        }
+        "wm"
         "memory"
-        "break"
         "colors"
       ];
     };
@@ -77,7 +61,11 @@
     autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
     initContent = ''
-      pfetch
+      if [[ ( $TERM == xterm-kitty || $TERM == xterm-ghostty ) && -z $TMUX ]]; then
+        fastfetch
+      else
+        fastfetch --logo nixos --logo-type small
+      fi
       alias nd="nix develop -c $SHELL"
       alias nv="neovide --fork"
     '';
@@ -106,12 +94,4 @@
     "$HOME/.cargo/bin"
     "$HOME/.local/bin"
   ];
-
-  home.packages = [pkgs.pfetch];
-  # Pfetch configuration
-  home.sessionVariables = {
-    PF_INFO = "ascii title os kernel uptime pkgs memory";
-    PF_ASCII = "nixos";
-    PF_SEP = "  ";
-  };
 }
