@@ -26,6 +26,18 @@
 
   programs.lazygit = {
     enable = true;
+    settings.git.diffRenderers = [{command = "delta --paging=never";}];
+  };
+
+  programs.delta = {
+    enable = true;
+    enableGitIntegration = true;
+    options = {
+      navigate = true;
+      line-numbers = true;
+      # The theme Stylix generates for bat, so diffs follow the wallpaper palette.
+      syntax-theme = "base16-stylix";
+    };
   };
 
   programs.cava = {
