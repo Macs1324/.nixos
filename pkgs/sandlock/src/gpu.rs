@@ -52,7 +52,11 @@ pub(crate) struct Params {
     pub(crate) tide: [f32; 4],
     /// Density correction rate (1/s, 0 = off).
     pub(crate) density: f32,
-    pub(crate) _pad: [u32; 3],
+    /// Seconds since the grains started flying home, and when every grain
+    /// must be exactly home.
+    pub(crate) homing_t: f32,
+    pub(crate) homing_done: f32,
+    pub(crate) _pad: u32,
     /// Quiet zones: noise threshold, size (px), noise time, strength (0 = off).
     pub(crate) quiet: [f32; 4],
 }
@@ -552,7 +556,9 @@ impl Sim {
             seed: 0,
             tide: [0.0; 4],
             density: 0.0,
-            _pad: [0; 3],
+            homing_t: 0.0,
+            homing_done: 0.0,
+            _pad: 0,
             quiet: [0.0; 4],
         };
         let params_buf = device.create_buffer(&wgpu::BufferDescriptor {

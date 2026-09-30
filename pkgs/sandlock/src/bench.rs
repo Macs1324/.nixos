@@ -18,7 +18,7 @@ use crate::attract;
 use crate::capture::Image;
 use crate::config::Config;
 use crate::gpu::{Compose, Gpu, Place, Sim};
-use crate::storm::Storm;
+use crate::storm::{Storm, HOMING_DONE};
 
 const DT: f32 = 1.0 / 60.0;
 /// Sim times (s) at which the picture is measured.
@@ -248,6 +248,53 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
     if opts.paced > 0.0 {
         paced(&mut scene, opts.paced)?;
     }
+    unlock(&mut scene, &images)
+}
+
+/// The correct password: the grains fly home. Saves frames on the way
+/// (`SANDLOCK_BENCH_DUMP`) and checks the last frame is the screenshot,
+/// exactly, as the handoff to the live desktop needs.
+fn unlock(scene: &mut Scene, images: &[Image]) -> anyhow::Result<()> {
+    let dir = std::env::var_os("SANDLOCK_BENCH_DUMP").map(PathBuf::from);
+    // Every other frame of the primary output with SANDLOCK_BENCH_UNLOCK_ALL
+    // (for an animation), else a few stills.
+    let all = std::env::var_os("SANDLOCK_BENCH_UNLOCK_ALL").is_some();
+    let mut stops = [0.2, 0.45, 0.8, 1.3, 1.9].into_iter().peekable();
+    let mut n = 0u32;
+    scene.storm.correct();
+    while scene.storm.homing_for().is_some_and(|t| t < HOMING_DONE) {
+        scene.frame();
+        let t = scene.storm.homing_for().unwrap_or(HOMING_DONE);
+        n += 1;
+        if let Some(dir) = &dir
+            && all
+        {
+            if n.is_multiple_of(2) {
+                let (compose, texture, _) = &scene.outputs[0];
+                let bgra = read_texture(&scene.gpu, texture, compose.place.size)?;
+                dump(&dir.join(format!("frame-{:03}.png", n / 2)), compose.place.size, &bgra)?;
+            }
+        } else if let Some(dir) = &dir
+            && stops.peek().is_some_and(|&s| t >= s)
+        {
+            stops.next();
+            for (k, (compose, texture, _)) in scene.outputs.iter().enumerate() {
+                let bgra = read_texture(&scene.gpu, texture, compose.place.size)?;
+                dump(&dir.join(format!("unlock-{t:.2}-out{}.png", k + 1)), compose.place.size, &bgra)?;
+            }
+        }
+    }
+    scene.wait()?;
+    let (mut differ, mut total) = (0u64, 0u64);
+    for ((compose, texture, _), img) in scene.outputs.iter().zip(images) {
+        let bgra = read_texture(&scene.gpu, texture, compose.place.size)?;
+        for (a, b) in bgra.as_chunks::<4>().0.iter().zip(img.bgra.as_chunks::<4>().0) {
+            total += 1;
+            differ += u64::from(a[..3] != b[..3]);
+        }
+    }
+    println!();
+    println!("unlock: after {HOMING_DONE} s, {differ} of {total} pixels differ from the screenshot");
     Ok(())
 }
 

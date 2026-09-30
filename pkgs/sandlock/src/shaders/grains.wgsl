@@ -226,12 +226,23 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
         v = mix(v, spring, tide);
     }
     if (homing) {
-        // Critically damped springs; the flow fades out as they take over.
-        let k = 55.0;
-        let spring = s.zw + dt * (k * (h - pos) - 2.0 * sqrt(k) * s.zw);
+        // Springs home, a little underdamped; the storm fades out as they
+        // take over, so grains curve in on its momentum.
+        let k = 90.0;
+        let spring = s.zw + dt * (k * (h - pos) - 1.6 * sqrt(k) * s.zw);
         v = mix(v, spring, P.homing);
     }
     pos += v * dt;
+    if (homing) {
+        // The last of the wobble eases out, so every grain is exactly home
+        // by `homing_done` and the handoff to the live desktop is exact.
+        let settle = smoothstep(P.homing_done - 0.5, P.homing_done - 0.1, P.homing_t);
+        pos = mix(pos, h, 0.5 * settle);
+        if (P.homing_t >= P.homing_done - 0.1) {
+            pos = h;
+            v = vec2<f32>(0.0);
+        }
+    }
 
     // Walls: reflect, never clamp. Clamping stacked grains on the edge line,
     // draining the band next to it (which gap filling then showed as shards).

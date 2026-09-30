@@ -30,12 +30,12 @@ impl Rng {
 }
 
 const RELEASE_DELAY: f32 = 0.15;
-const HOMING_RAMP: f32 = 0.5;
+const HOMING_RAMP: f32 = 0.35;
 const SHAKE: f32 = 0.4;
 /// Wind force (cells/s²) at `intensity = 1`.
 const WIND: f32 = 12.0;
 /// After this long, every grain is home and the frame equals the screenshot.
-pub(crate) const HOMING_DONE: f32 = 2.4;
+pub(crate) const HOMING_DONE: f32 = 1.4;
 
 #[derive(Clone, Copy, PartialEq)]
 pub(crate) enum Phase {
@@ -339,6 +339,8 @@ impl Storm {
         params.time = self.time;
         params.release_start = RELEASE_DELAY;
         params.homing = homing.unwrap_or(0.0);
+        params.homing_t = self.homing_for().unwrap_or(0.0);
+        params.homing_done = HOMING_DONE;
         let storming = homing.is_none();
         params.vorticity = if storming {
             12.0 * t.swirl * (1.0 + 0.6 * self.entropy)

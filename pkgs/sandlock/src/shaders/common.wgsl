@@ -20,9 +20,9 @@ struct Params {
     seed: u32,           // changes every step: per-step randomness
     tide: vec4<f32>,     // tide: x band centre px, y half width px (0 = off), z strength
     density: f32,        // density correction rate (1/s, 0 = off)
+    homing_t: f32,       // seconds since the grains started flying home
+    homing_done: f32,    // ... and when every grain must be exactly home
     _pad0: u32,
-    _pad1: u32,
-    _pad2: u32,
     quiet: vec4<f32>,    // quiet zones: x noise threshold, y size px, z noise time, w calm (0 = off)
 }
 
