@@ -22,7 +22,10 @@ use anyhow::{bail, Context};
 use smithay_client_toolkit::{
     compositor::{CompositorHandler, CompositorState, FrameCallbackData},
     output::{OutputHandler, OutputInfo, OutputState},
-    reexports::{calloop::EventLoop, calloop_wayland_source::WaylandSource},
+    reexports::{
+        calloop::{EventLoop, LoopHandle},
+        calloop_wayland_source::WaylandSource,
+    },
     registry::{ProvidesRegistryState, RegistryState},
     registry_handlers,
     seat::{
@@ -163,6 +166,8 @@ struct App {
     viewporter: Option<WpViewporter>,
     screencopy: Option<ZwlrScreencopyManagerV1>,
     keyboard: Option<wl_keyboard::WlKeyboard>,
+    /// For key repeat's timers.
+    loop_handle: LoopHandle<'static, App>,
     pointer: Option<wl_pointer::WlPointer>,
     /// Pointer positions (canvas px) since the last loop; `true` = it just
     /// entered a screen.
@@ -257,6 +262,7 @@ fn main() -> anyhow::Result<()> {
         viewporter: globals.bind(&qh, 1..=1, ()).ok(),
         screencopy: globals.bind(&qh, 1..=3, ()).ok(),
         keyboard: None,
+        loop_handle: event_loop.handle(),
         pointer: None,
         pointer_moves: Vec::new(),
         places: Vec::new(),
@@ -813,6 +819,13 @@ impl App {
         })
     }
 
+    /// A held key repeated: only Backspace does anything.
+    fn repeated(&mut self, event: &KeyEvent) {
+        if event.keysym == Keysym::BackSpace {
+            self.keys.push(Key::Backspace);
+        }
+    }
+
     fn mark_configured(&mut self, surface: &wl_surface::WlSurface, size: (u32, u32)) {
         for screen in &mut self.screens {
             if screen.role.wl_surface() == surface {
@@ -960,14 +973,17 @@ impl KeyboardHandler for App {
         self.keys.push(key);
     }
 
+    /// Repeats sent by the compositor (wl_keyboard v10), rather than timed
+    /// here.
     fn repeat_key(
         &mut self,
         _: &Connection,
         _: &QueueHandle<Self>,
         _: &wl_keyboard::WlKeyboard,
         _: u32,
-        _: KeyEvent,
+        event: KeyEvent,
     ) {
+        self.repeated(&event);
     }
 
     fn release_key(
@@ -1009,7 +1025,10 @@ impl SeatHandler for App {
     ) {
         log::debug!("seat capability {capability:?}");
         if capability == Capability::Keyboard && self.keyboard.is_none() {
-            match self.seat_state.get_keyboard(qh, &seat, None) {
+            // Held Backspace repeats; nothing else does (repeated
+            // characters nobody can see would be typos).
+            let repeat = Box::new(|app: &mut App, _: &wl_keyboard::WlKeyboard, event: KeyEvent| app.repeated(&event));
+            match self.seat_state.get_keyboard_with_repeat(qh, &seat, None, self.loop_handle.clone(), repeat) {
                 Ok(k) => self.keyboard = Some(k),
                 Err(e) => log::error!("keyboard: {e}"),
             }
