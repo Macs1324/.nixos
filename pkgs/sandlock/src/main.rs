@@ -59,6 +59,9 @@ use storm::{Phase, Storm, HOMING_DONE};
 
 const PAM_SERVICE: &str = "sandlock";
 const FADE: f32 = 0.35;
+/// A frame callback this late is taken as lost (or the output is asleep):
+/// draw anyway, so the screen never freezes.
+const LOST_CALLBACK: Duration = Duration::from_secs(1);
 
 enum Key {
     Char(String),
@@ -102,8 +105,18 @@ impl Screen {
     /// Whether the compositor wants a frame and the frame-rate cap allows one.
     fn due(&self, now: Instant) -> bool {
         // A lost callback must not freeze the screen forever.
-        let waiting = self.waiting.is_some_and(|t| now - t < Duration::from_secs(1));
+        let waiting = self.waiting.is_some_and(|t| now - t < LOST_CALLBACK);
         self.gfx.is_some() && !waiting && now >= self.due
+    }
+
+    /// When this screen next needs the loop: its next frame, or giving up on
+    /// a lost frame callback.
+    fn next_wake(&self) -> Option<Instant> {
+        self.gfx.as_ref()?;
+        Some(match self.waiting {
+            Some(t) => (t + LOST_CALLBACK).max(self.due),
+            None => self.due,
+        })
     }
 
     /// Draws a frame (after `Sim::rasterize`) and asks for the next callback.
@@ -164,6 +177,8 @@ struct App {
     screens: Vec<Screen>,
     keys: Vec<Key>,
     closed: bool,
+    /// When the compositor last asked for a frame: it shows the screens.
+    asked: Instant,
 }
 
 fn main() -> anyhow::Result<()> {
@@ -252,6 +267,7 @@ fn main() -> anyhow::Result<()> {
         screens: Vec::new(),
         keys: Vec::new(),
         closed: false,
+        asked: Instant::now(),
     };
     if preview && app.layer_shell.is_none() {
         bail!("--preview needs wlr-layer-shell");
@@ -386,14 +402,16 @@ fn main() -> anyhow::Result<()> {
     let mut backlog = 0.0f32;
     let mut frames = 0u32;
     let mut stats_since = Instant::now();
-    let mut last_shown = Instant::now();
     let mut announced = false;
+    let mut timeout = Duration::ZERO;
+    // Setting up may have taken a while: the first frames still play.
+    app.asked = Instant::now();
     // Locking counts as input: the dissolve plays at the full rate.
     let mut last_input = Instant::now();
     let rates = config.display;
     loop {
-        // Short waits keep input responsive whether or not frames are due.
-        event_loop.dispatch(Duration::from_millis(2), &mut app)?;
+        // Input and frame callbacks wake the loop early.
+        event_loop.dispatch(timeout, &mut app)?;
         if app.closed {
             bail!("a surface was closed by the compositor");
         }
@@ -470,11 +488,12 @@ fn main() -> anyhow::Result<()> {
         let active = last_input.elapsed().as_secs_f32() < rates.idle_after || storm.phase != Phase::Storm;
         let step = 1.0 / if active { rates.fps } else { rates.idle_fps };
 
-        // Fixed-step simulation, catching up with real time. While no screen
-        // has been drawn for a while (outputs asleep), the storm pauses
-        // instead of keeping the GPU busy; homing always finishes.
+        // Fixed-step simulation, catching up with real time. While the
+        // compositor asks for no frames (outputs asleep), the storm pauses
+        // instead of keeping the GPU busy; homing always finishes. (Frames
+        // drawn without being asked for, after a lost callback, don't count.)
         let now = Instant::now();
-        let visible = now - last_shown < Duration::from_millis(500) || storm.homing_for().is_some();
+        let visible = now - app.asked < Duration::from_millis(500) || storm.homing_for().is_some();
         backlog = if visible {
             (backlog + (now - last).as_secs_f32()).min(step * 6.0)
         } else {
@@ -497,7 +516,6 @@ fn main() -> anyhow::Result<()> {
         }
         let drew = draw_due(&mut app.screens, &qh, &gpu, &sim, 1.0, Duration::from_secs_f32(step));
         if drew {
-            last_shown = now;
             frames += 1;
             if app.locked && !announced {
                 instance.mark_locked();
@@ -524,6 +542,19 @@ fn main() -> anyhow::Result<()> {
 
         if storm.homing_for().is_some_and(|t| t >= HOMING_DONE) {
             break;
+        }
+
+        // Sleep until a frame or a simulation step is due. The password
+        // check's answer can't wake the loop: poll for it meanwhile.
+        let now = Instant::now();
+        let mut wake = app.screens.iter().filter_map(Screen::next_wake).min();
+        if visible {
+            let step_due = now + Duration::from_secs_f32((step - backlog).max(0.0));
+            wake = Some(wake.map_or(step_due, |w| w.min(step_due)));
+        }
+        timeout = wake.map_or(LOST_CALLBACK, |w| w.saturating_duration_since(now));
+        if storm.phase == Phase::Checking {
+            timeout = timeout.min(Duration::from_millis(10));
         }
     }
 
@@ -1036,6 +1067,7 @@ impl CompositorHandler for App {
         for screen in &mut self.screens {
             if screen.role.wl_surface() == surface {
                 screen.waiting = None;
+                self.asked = Instant::now();
             }
         }
     }
