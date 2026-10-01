@@ -73,7 +73,12 @@ fn pack(@builtin(global_invocation_id) id: vec3<u32>) {
         packed_rw[pi] = 0u;
         return;
     }
-    let off = clamp(grains[o - 1u].xy - vec2<f32>(id.xy), vec2<f32>(0.0), vec2<f32>(1.0));
+    // A grain strict placement moved (place.wgsl) is somewhere else: it sits
+    // on its new pixel's centre.
+    var off = grains[o - 1u].xy - vec2<f32>(id.xy);
+    if (any(off < vec2<f32>(0.0)) || any(off > vec2<f32>(1.0))) {
+        off = vec2<f32>(0.5);
+    }
     let q = vec2<u32>(round(off * 14.0)) + 1u;
     let c = vec3<u32>(round(textureLoad(shot, home_of(o - 1u), 0).rgb * 255.0));
     packed_rw[pi] = (c.r << 24u) | (c.g << 16u) | (c.b << 8u) | (q.x << 4u) | q.y;

@@ -21,7 +21,7 @@ struct Params {
     density: f32,        // density correction rate (1/s, 0 = off)
     homing_t: f32,       // seconds since the grains started flying home
     homing_done: f32,    // ... and when every grain must be exactly home
-    _pad0: u32,
+    placed: u32,         // 1 = every pixel holds exactly one grain (place.wgsl)
     quiet: vec4<f32>,    // quiet zones: x noise threshold, y size px, z noise time, w calm (0 = off)
 }
 

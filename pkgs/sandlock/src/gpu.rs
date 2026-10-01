@@ -16,6 +16,7 @@ const FLUID: &str = include_str!("shaders/fluid.wgsl");
 const GRAINS: &str = include_str!("shaders/grains.wgsl");
 const RENDER: &str = include_str!("shaders/render.wgsl");
 const ATTRACT: &str = include_str!("shaders/attract.wgsl");
+const PLACE: &str = include_str!("shaders/place.wgsl");
 /// Dynamic-offset stride for per-attractor uniforms.
 const RECT_SLOT: u64 = 256;
 
@@ -53,7 +54,9 @@ pub(crate) struct Params {
     /// must be exactly home.
     pub(crate) homing_t: f32,
     pub(crate) homing_done: f32,
-    pub(crate) _pad: u32,
+    /// 1 while placement is strict (shaders/place.wgsl): `owner` holds every
+    /// grain on a pixel of its own.
+    pub(crate) placed: u32,
     /// Quiet zones: noise threshold, size (px), noise time, strength (0 = off).
     pub(crate) quiet: [f32; 4],
 }
@@ -402,6 +405,154 @@ pub(crate) struct Sim {
     dsource: Pass,
     phi: [Pass; 2],
     quiet_map: Pass,
+    /// Strict placement while grains fly home; None if the canvas holds more
+    /// grains than pixels (overlapping outputs), where it can't be strict.
+    placement: Option<Placement>,
+}
+
+/// place.wgsl `Round`.
+#[repr(C)]
+#[derive(Clone, Copy, Pod, Zeroable)]
+struct RoundUniform {
+    radius: f32,
+    salt: u32,
+    _pad: [u32; 2],
+}
+
+/// Radii (px) of the rounds in which grains hidden under others claim free
+/// pixels: nearest first, then further out.
+const CLAIM_RADII: [f32; 7] = [1.5, 3.0, 6.0, 12.0, 24.0, 48.0, 96.0];
+
+/// Strict placement for the recompose (shaders/place.wgsl): while grains fly
+/// home, every pixel holds exactly one grain, so nothing overlaps and nothing
+/// shows black.
+struct Placement {
+    keep: Pass,
+    gather: Pass,
+    size_claims: Pass,
+    claim: Pass,
+    holes: Pass,
+    rest: Pass,
+    home: Pass,
+    /// One `Round` per claim round (dynamic offsets).
+    rounds: wgpu::BindGroup,
+    /// Whether each grain has a pixel (borrowed from the attractors),
+    /// cleared every step.
+    placed: wgpu::Buffer,
+    counters: wgpu::Buffer,
+    /// Workgroups for the claim rounds, sized on the GPU.
+    claim_groups: wgpu::Buffer,
+}
+
+impl Placement {
+    /// `buffers`: params, grains, owner, outputs, then scratch: one u32 per
+    /// grain (`placed`) and one per pixel (place.wgsl `list`).
+    fn new(device: &wgpu::Device, buffers: [&wgpu::Buffer; 6]) -> Self {
+        let cs = wgpu::ShaderStages::COMPUTE;
+        let counters = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("placement counters"),
+            size: 12,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
+            mapped_at_creation: false,
+        });
+        let claim_groups = device.create_buffer(&wgpu::BufferDescriptor {
+            label: Some("placement claim groups"),
+            size: 12,
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::INDIRECT,
+            mapped_at_creation: false,
+        });
+        // Two layouts: the claim rounds' size is bound (as storage) only where
+        // it is written; the claim dispatch reads it as its indirect size,
+        // which must not overlap a storage binding of it.
+        let layout_with = |label, sizes: bool| {
+            let mut entries = vec![
+                entry(0, cs, uniform()),
+                entry(1, cs, storage(true)),
+                entry(2, cs, storage(false)),
+                entry(3, cs, storage(true)),
+                entry(4, cs, storage(false)),
+                entry(5, cs, storage(false)),
+                entry(6, cs, storage(false)),
+            ];
+            if sizes {
+                entries.push(entry(7, cs, storage(false)));
+            }
+            device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor { label: Some(label), entries: &entries })
+        };
+        let (layout, sizing_layout) = (layout_with("place", false), layout_with("place sizing", true));
+        let round_layout = device.create_bind_group_layout(&wgpu::BindGroupLayoutDescriptor {
+            label: Some("place round"),
+            entries: &[entry(
+                0,
+                cs,
+                wgpu::BindingType::Buffer {
+                    ty: wgpu::BufferBindingType::Uniform,
+                    has_dynamic_offset: true,
+                    min_binding_size: wgpu::BufferSize::new(size_of::<RoundUniform>() as u64),
+                },
+            )],
+        });
+        let group_with = |layout: &wgpu::BindGroupLayout, extra: &[&wgpu::Buffer]| {
+            let entries: Vec<_> = buffers
+                .iter()
+                .copied()
+                .chain([&counters])
+                .chain(extra.iter().copied())
+                .enumerate()
+                .map(|(b, buf)| wgpu::BindGroupEntry {
+                    binding: b as u32,
+                    resource: buf.as_entire_binding(),
+                })
+                .collect();
+            device.create_bind_group(&wgpu::BindGroupDescriptor { label: Some("place"), layout, entries: &entries })
+        };
+        let (group, sizing_group) = (group_with(&layout, &[]), group_with(&sizing_layout, &[&claim_groups]));
+        let module = module(device, "place", PLACE);
+        let pass = |name: &str| Pass {
+            pipeline: compute(device, &module, name, &[&layout, &round_layout]),
+            group: group.clone(),
+        };
+
+        let mut slots = vec![0u8; CLAIM_RADII.len() * RECT_SLOT as usize];
+        for (k, &radius) in CLAIM_RADII.iter().enumerate() {
+            let round = RoundUniform { radius, salt: k as u32 + 1, _pad: [0; 2] };
+            slots[k * RECT_SLOT as usize..][..size_of::<RoundUniform>()].copy_from_slice(bytemuck::bytes_of(&round));
+        }
+        use wgpu::util::DeviceExt;
+        let round_buf = device.create_buffer_init(&wgpu::util::BufferInitDescriptor {
+            label: Some("place rounds"),
+            contents: &slots,
+            usage: wgpu::BufferUsages::UNIFORM,
+        });
+        let rounds = device.create_bind_group(&wgpu::BindGroupDescriptor {
+            label: Some("place rounds"),
+            layout: &round_layout,
+            entries: &[wgpu::BindGroupEntry {
+                binding: 0,
+                resource: wgpu::BindingResource::Buffer(wgpu::BufferBinding {
+                    buffer: &round_buf,
+                    offset: 0,
+                    size: wgpu::BufferSize::new(size_of::<RoundUniform>() as u64),
+                }),
+            }],
+        });
+        Self {
+            keep: pass("keep"),
+            gather: pass("gather"),
+            size_claims: Pass {
+                pipeline: compute(device, &module, "size_claims", &[&sizing_layout, &round_layout]),
+                group: sizing_group,
+            },
+            claim: pass("claim"),
+            holes: pass("holes"),
+            rest: pass("rest"),
+            home: pass("home"),
+            rounds,
+            placed: buffers[4].clone(),
+            counters,
+            claim_groups,
+        }
+    }
 }
 
 /// Per-attractor recruit settings (attract.wgsl `Rect`).
@@ -557,7 +708,7 @@ impl Sim {
             density: 0.0,
             homing_t: 0.0,
             homing_done: 0.0,
-            _pad: 0,
+            placed: 0,
             quiet: [0.0; 4],
         };
         let params_buf = device.create_buffer(&wgpu::BufferDescriptor {
@@ -751,7 +902,8 @@ impl Sim {
         let bound = device.create_buffer(&wgpu::BufferDescriptor {
             label: Some("bound"),
             size: n_grains * 4,
-            usage: wgpu::BufferUsages::STORAGE,
+            // Placement clears it every step (see `Placement`).
+            usage: wgpu::BufferUsages::STORAGE | wgpu::BufferUsages::COPY_DST,
             mapped_at_creation: false,
         });
 
@@ -901,6 +1053,13 @@ impl Sim {
             }),
         };
 
+        let placement = (n_grains == u64::from(canvas[0]) * u64::from(canvas[1])).then(|| {
+            Placement::new(device, [&params_buf, &grains, &owner, &outs_buf, &bound, &claim])
+        });
+        if placement.is_none() {
+            log::warn!("outputs overlap in the canvas: the recompose can't place grains strictly");
+        }
+
         let mut sim = Self {
             params,
             grid,
@@ -936,6 +1095,7 @@ impl Sim {
             dsource,
             phi: phi_pass,
             quiet_map,
+            placement,
         };
         // Place every grain at home before the first frame is drawn.
         sim.step(gpu, 0.0, &[]);
@@ -1005,8 +1165,9 @@ impl Sim {
     /// they compose.
     pub(crate) fn rasterize(&self, gpu: &Gpu) {
         let mut encoder = gpu.device.create_command_encoder(&Default::default());
-        encoder.clear_buffer(&self.owner, 0, None);
-        {
+        // While placement is strict, the owner buffer is the placement.
+        if self.params.placed == 0 {
+            encoder.clear_buffer(&self.owner, 0, None);
             let mut cpass = begin(&mut encoder, &self.profiler, "scatter");
             cpass.set_pipeline(&self.scatter.pipeline);
             cpass.set_bind_group(0, &self.scatter.group, &[]);
@@ -1078,6 +1239,8 @@ impl Sim {
         self.params.dt = dt;
         self.params.splat_count = splats.len() as u32;
         self.params.seed = self.params.seed.wrapping_add(1);
+        let placing = self.params.homing > 0.0 && self.placement.is_some();
+        self.params.placed = u32::from(placing);
         gpu.queue
             .write_buffer(&self.params_buf, 0, bytemuck::bytes_of(&self.params));
         gpu.queue
@@ -1128,7 +1291,9 @@ impl Sim {
                 run(&mut cpass, &self.quiet_map);
             }
         }
-        if let Some(rect_group) = &self.rect_group {
+        // Nothing recruits while grains fly home (placement also borrows the
+        // attractors' buffers then).
+        if let Some(rect_group) = self.rect_group.as_ref().filter(|_| self.params.homing == 0.0) {
             let mut cpass = begin(&mut encoder, &self.profiler, "recruit");
             cpass.set_pipeline(&self.recruit.pipeline);
             cpass.set_bind_group(0, &self.recruit.group, &[]);
@@ -1143,7 +1308,54 @@ impl Sim {
             cpass.set_bind_group(0, &self.grains_pass.group, &[]);
             cpass.dispatch_workgroups(self.grain_groups[0], self.grain_groups[1], 1);
         }
+        if placing {
+            self.place(&mut encoder);
+        }
         gpu.queue.submit([encoder.finish()]);
+    }
+
+    /// Gives every grain a pixel of its own: where it is if it is drawn
+    /// there, else the nearest free one; once every grain is due home exactly
+    /// (grains.wgsl), every pixel gets its own grain back.
+    fn place(&self, encoder: &mut wgpu::CommandEncoder) {
+        let Some(pl) = &self.placement else { return };
+        let [w, h] = self.canvas;
+        let run = |cpass: &mut wgpu::ComputePass, p: &Pass, round: usize, groups: [u32; 2]| {
+            cpass.set_pipeline(&p.pipeline);
+            cpass.set_bind_group(0, &p.group, &[]);
+            cpass.set_bind_group(1, &pl.rounds, &[(round as u64 * RECT_SLOT) as u32]);
+            cpass.dispatch_workgroups(groups[0], groups[1], 1);
+        };
+        if self.params.homing_t >= self.params.homing_done - 0.1 {
+            run(&mut begin(encoder, &self.profiler, "place: home"), &pl.home, 0, [w.div_ceil(16), h.div_ceil(16)]);
+            return;
+        }
+        // Where the grains are now, no grain with priority.
+        encoder.clear_buffer(&self.owner, 0, None);
+        encoder.clear_buffer(&pl.placed, 0, None);
+        encoder.clear_buffer(&pl.counters, 0, None);
+        {
+            let mut cpass = begin(encoder, &self.profiler, "place: keep");
+            cpass.set_pipeline(&self.scatter.pipeline);
+            cpass.set_bind_group(0, &self.scatter.group, &[]);
+            cpass.dispatch_workgroups(self.grain_groups[0], self.grain_groups[1], 1);
+            // Pixels and grains are equally many: the same dispatch serves both.
+            run(&mut cpass, &pl.keep, 0, self.grain_groups);
+            run(&mut cpass, &pl.gather, 0, self.grain_groups);
+            run(&mut cpass, &pl.size_claims, 0, [1, 1]);
+        }
+        {
+            let mut cpass = begin(encoder, &self.profiler, "place: claim");
+            cpass.set_pipeline(&pl.claim.pipeline);
+            cpass.set_bind_group(0, &pl.claim.group, &[]);
+            for round in 0..CLAIM_RADII.len() {
+                cpass.set_bind_group(1, &pl.rounds, &[(round as u64 * RECT_SLOT) as u32]);
+                cpass.dispatch_workgroups_indirect(&pl.claim_groups, 0);
+            }
+        }
+        let mut cpass = begin(encoder, &self.profiler, "place: rest");
+        run(&mut cpass, &pl.holes, 0, self.grain_groups);
+        run(&mut cpass, &pl.rest, 0, self.grain_groups);
     }
 }
 
@@ -1459,7 +1671,7 @@ mod tests {
     /// Every shader module parses and validates, as `module` builds it.
     #[test]
     fn shaders_validate() {
-        for (name, body) in [("fluid", FLUID), ("grains", GRAINS), ("render", RENDER), ("attract", ATTRACT)] {
+        for (name, body) in [("fluid", FLUID), ("grains", GRAINS), ("render", RENDER), ("attract", ATTRACT), ("place", PLACE)] {
             let source = format!("{COMMON}\n{body}");
             let module = naga::front::wgsl::parse_str(&source)
                 .unwrap_or_else(|e| panic!("{name}: {}", e.emit_to_string(&source)));
