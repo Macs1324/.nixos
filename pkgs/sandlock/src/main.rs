@@ -408,6 +408,11 @@ fn main() -> anyhow::Result<()> {
             match key {
                 Key::Char(s) => {
                     let mut s = s.into_bytes();
+                    if password.len() + s.len() > password.capacity() {
+                        // Growing would leave a copy behind in freed memory.
+                        wipe(&mut s);
+                        continue;
+                    }
                     password.extend_from_slice(&s);
                     wipe(&mut s);
                     storm.typed();
@@ -429,7 +434,9 @@ fn main() -> anyhow::Result<()> {
                 Key::Enter if password.is_empty() => {}
                 Key::Enter => {
                     storm.submitted();
-                    let secret = std::mem::take(&mut password);
+                    // Replaced, not taken: the next attempt needs the
+                    // preallocated room too.
+                    let secret = std::mem::replace(&mut password, Vec::with_capacity(1024));
                     let tx = auth_tx.clone();
                     let service = pam_service();
                     std::thread::spawn(move || {
