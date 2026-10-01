@@ -7,7 +7,7 @@
 //! - how the picture holds up over time: holes, grains near home, and local
 //!   colour roughness against the original (soup is rough speckle);
 //! - real power: GPU watts, busy % and fan speed at a paced 60 fps, against an
-//!   idle baseline (amdgpu sysfs; skipped where it is missing).
+//!   idle baseline (amdgpu, xe or i915 sysfs; skipped where it is missing).
 
 use std::path::PathBuf;
 use std::time::{Duration, Instant};
@@ -555,9 +555,17 @@ fn roughness_of_images(images: &[Image], places: &[Place]) -> f32 {
 
 // ---- power -------------------------------------------------------------------
 
-/// amdgpu's sysfs files for the first GPU that has them.
+/// Where a GPU reports its power: amdgpu as a power reading (µW), Intel's
+/// xe and i915 only as an energy counter (µJ), turned into watts between
+/// samples.
+enum Power {
+    Reading(PathBuf),
+    Energy { path: PathBuf, last: Option<(f64, Instant)> },
+}
+
+/// The first GPU's power, busy % (amdgpu only) and fan sysfs files.
 struct Sensors {
-    power: Option<PathBuf>,
+    power: Option<Power>,
     busy: Option<PathBuf>,
     fan: Option<PathBuf>,
 }
@@ -568,18 +576,19 @@ impl Sensors {
         let Ok(cards) = std::fs::read_dir("/sys/class/drm") else { return s };
         for card in cards.flatten() {
             let dev = card.path().join("device");
-            if !dev.join("gpu_busy_percent").exists() {
-                continue;
+            let Ok(hwmons) = std::fs::read_dir(dev.join("hwmon")) else { continue };
+            for hw in hwmons.flatten() {
+                let hw = hw.path();
+                let reading = ["power1_average", "power1_input"].iter().map(|f| hw.join(f)).find(|p| p.exists());
+                // energy1 is the whole card on xe (energy2 the GPU package).
+                let energy = Some(hw.join("energy1_input")).filter(|p| p.exists());
+                s.power = reading.map(Power::Reading).or(energy.map(|path| Power::Energy { path, last: None }));
+                s.fan = Some(hw.join("fan1_input")).filter(|p| p.exists());
             }
-            s.busy = Some(dev.join("gpu_busy_percent"));
-            if let Ok(hwmons) = std::fs::read_dir(dev.join("hwmon")) {
-                for hw in hwmons.flatten() {
-                    let hw = hw.path();
-                    s.power = ["power1_average", "power1_input"].iter().map(|f| hw.join(f)).find(|p| p.exists());
-                    s.fan = Some(hw.join("fan1_input")).filter(|p| p.exists());
-                }
+            if s.power.is_some() {
+                s.busy = Some(dev.join("gpu_busy_percent")).filter(|p| p.exists());
+                break;
             }
-            break;
         }
         s
     }
@@ -588,9 +597,21 @@ impl Sensors {
         std::fs::read_to_string(path.as_ref()?).ok()?.trim().parse().ok()
     }
 
+    fn watts(&mut self) -> Option<f64> {
+        match self.power.as_mut()? {
+            Power::Reading(path) => Self::read(&Some(path.clone())).map(|uw| uw / 1e6),
+            Power::Energy { path, last } => {
+                let now = (Self::read(&Some(path.clone()))?, Instant::now());
+                let before = last.replace(now)?;
+                let secs = (now.1 - before.1).as_secs_f64();
+                (secs > 0.0).then(|| (now.0 - before.0) / 1e6 / secs)
+            }
+        }
+    }
+
     /// (watts, busy %, fan rpm)
-    fn sample(&self) -> (Option<f64>, Option<f64>, Option<f64>) {
-        (Self::read(&self.power).map(|uw| uw / 1e6), Self::read(&self.busy), Self::read(&self.fan))
+    fn sample(&mut self) -> (Option<f64>, Option<f64>, Option<f64>) {
+        (self.watts(), Self::read(&self.busy), Self::read(&self.fan))
     }
 }
 
@@ -623,9 +644,9 @@ impl Samples {
 
 /// Idle baseline, then the storm at a real 60 fps, sampling the sensors.
 fn paced(scene: &mut Scene, secs: f32) -> anyhow::Result<()> {
-    let sensors = Sensors::find();
+    let mut sensors = Sensors::find();
     if sensors.power.is_none() && sensors.busy.is_none() {
-        println!("\nno amdgpu sensors found: skipping the power run");
+        println!("\nno GPU power sensors found: skipping the power run");
         return Ok(());
     }
     println!();
@@ -642,11 +663,18 @@ fn paced(scene: &mut Scene, secs: f32) -> anyhow::Result<()> {
     let start = Instant::now();
     let mut next_frame = start;
     let mut next_sample = start + Duration::from_secs(2); // let clocks settle
+    // An energy counter averages since the last sample: one sample before
+    // the first that counts, so that one excludes the settling.
+    let mut primed = false;
     while start.elapsed().as_secs_f32() < secs {
         scene.frame();
         scene.wait()?;
         next_frame += Duration::from_secs_f32(scene.dt);
         let now = Instant::now();
+        if !primed && now + sample_every >= next_sample {
+            sensors.sample();
+            primed = true;
+        }
         if now >= next_sample {
             running.add(sensors.sample());
             next_sample += sample_every;
