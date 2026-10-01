@@ -357,6 +357,7 @@ mod tests {
             std::fs::write(&path, text).unwrap();
             assert!(load(&path).is_err(), "{text:?} was accepted");
         }
+        std::fs::remove_dir_all(&dir).unwrap();
     }
 
     #[test]
