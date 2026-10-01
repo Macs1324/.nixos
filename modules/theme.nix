@@ -6,7 +6,7 @@
   pkgs,
   ...
 }: let
-  displays = import ../lib/monitors.nix {inherit lib;} config.desktop.monitors;
+  displays = import ../lib/monitors.nix {inherit lib pkgs;} config.desktop.monitors;
 in {
   imports = [./monitors.nix];
 

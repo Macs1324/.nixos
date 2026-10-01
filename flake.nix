@@ -77,6 +77,7 @@
     };
     tests = {
       monitor-model = import ./tests/monitors.nix {inherit lib pkgs;};
+      wallpaper-conversion = import ./tests/wallpaper.nix {inherit pkgs;};
       helper-tests =
         pkgs.runCommand "workstation-helper-tests" {
           nativeBuildInputs = [

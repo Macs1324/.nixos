@@ -24,9 +24,12 @@
     else if mode.width * 9 > mode.height * 16
     then "ultrawide"
     else "1080p";
-  wallpaper =
-    if primary != null && primary.wallpaper != null
-    then primary.wallpaper
+  # Already converted for the primary output (lib/wallpaper.nix).
+  wallpaper = let
+    prepared = (import ../lib/monitors.nix {inherit lib pkgs;} config.desktop.monitors).defaultWallpaper;
+  in
+    if prepared != null
+    then prepared
     else config.stylix.image;
   # WhiteSur's frosted-glass panel is painted into its own background art, so
   # a plain wallpaper would leave the menu floating on bare pixels. Recreate

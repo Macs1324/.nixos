@@ -1,25 +1,55 @@
 # Consume the normalized desktop.monitors option from modules/monitors.nix.
 # Keep compositor-specific details here, outside the machine inventories.
-{lib}: monitors: let
+#
+# With `pkgs`, every wallpaper is converted for the output it is on
+# (lib/wallpaper.nix: an upright sRGB PNG at its exact size); without, the
+# images are passed through as declared (the evaluation-only tests).
+{
+  lib,
+  pkgs ? null,
+}: monitors: let
   enabled = lib.filterAttrs (_: monitor: monitor.enable) monitors;
-  primary = lib.findFirst (monitor: monitor.primary) null (lib.attrValues enabled);
+  # name/value pairs, so outputs found by a property keep their names.
+  outputs = lib.mapAttrsToList lib.nameValuePair enabled;
+  primary = lib.findFirst (output: output.value.primary) null outputs;
+  # The output's physical size as it is seen (rotation applied), if declared.
+  seenSize = monitor:
+    if monitor.mode == null
+    then null
+    else if monitor.rotation == 90 || monitor.rotation == 270
+    then [monitor.mode.height monitor.mode.width]
+    else [monitor.mode.width monitor.mode.height];
+  prepare = name: monitor: image:
+    if pkgs == null || image == null
+    then image
+    else
+      import ./wallpaper.nix {inherit pkgs;} {
+        inherit name image;
+        size = seenSize monitor;
+      };
+  wallpaperFor = name: monitor:
+    prepare name monitor (
+      if monitor.wallpaper != null
+      then monitor.wallpaper
+      else primary.value.wallpaper or null
+    );
+  # The primary output's wallpaper, for outputs nobody declared.
   defaultWallpaper =
     if primary == null
     then null
-    else primary.wallpaper;
-  wallpaperFor = monitor:
-    if monitor.wallpaper != null
-    then monitor.wallpaper
-    else defaultWallpaper;
+    else wallpaperFor primary.name primary.value;
   # Leftmost placed output (top edge breaks ties); the primary output stands in
   # when no output has an explicit position.
-  placed = builtins.filter (monitor: monitor.position != null) (lib.attrValues enabled);
+  placed = builtins.filter (output: output.value.position != null) outputs;
   leftmost =
     if placed == []
     then primary
     else
-      builtins.head (lib.sort (a: b:
-        a.position.x < b.position.x || (a.position.x == b.position.x && a.position.y < b.position.y))
+      builtins.head (lib.sort (a: b: let
+        pa = a.value.position;
+        pb = b.value.position;
+      in
+        pa.x < pb.x || (pa.x == pb.x && pa.y < pb.y))
       placed);
   modeString = mode:
     if mode == null
@@ -32,9 +62,9 @@ in {
   themeWallpaper =
     if leftmost == null
     then null
-    else wallpaperFor leftmost;
+    else wallpaperFor leftmost.name leftmost.value;
   names = builtins.attrNames enabled;
-  wallpapers = lib.mapAttrs (_: wallpaperFor) enabled;
+  wallpapers = lib.mapAttrs wallpaperFor enabled;
 
   niriOutputs = lib.mapAttrs (_: monitor:
     {inherit (monitor) enable;}
@@ -113,6 +143,6 @@ in {
     enabled = true;
     automation.enabled = false;
     default.path = toString defaultWallpaper;
-    monitors = lib.mapAttrs (_: monitor: {path = toString (wallpaperFor monitor);}) enabled;
+    monitors = lib.mapAttrs (name: monitor: {path = toString (wallpaperFor name monitor);}) enabled;
   };
 }

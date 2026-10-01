@@ -16,6 +16,8 @@
       ];
     }).config;
   translate = monitors: import ../lib/monitors.nix {inherit lib;} (evaluate monitors).desktop.monitors;
+  # With pkgs, wallpapers are converted per output (lib/wallpaper.nix).
+  converting = import ../lib/monitors.nix {inherit lib pkgs;} (evaluate fixture).desktop.monitors;
   valid = monitors: lib.all (a: a.assertion) (evaluate monitors).assertions;
   wallpaper = ../assets/wallpapers/deep-sea.jpg;
   other = ../assets/wallpapers/mecha-wings.png;
@@ -105,6 +107,17 @@
     testWallpaperFallback = {
       expr = output.wallpapers.HDMI-A-1;
       expected = wallpaper;
+    };
+    testConvertedPerOutput = {
+      expr = lib.mapAttrs (_: w: w.name) converting.wallpapers;
+      expected = {
+        DP-1 = "wallpaper-DP-1.png";
+        HDMI-A-1 = "wallpaper-HDMI-A-1.png";
+      };
+    };
+    testConvertedDefault = {
+      expr = converting.defaultWallpaper.name;
+      expected = "wallpaper-DP-1.png";
     };
     testThemeWallpaperLeftmost = {
       expr =

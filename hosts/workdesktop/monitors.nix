@@ -10,7 +10,8 @@
       x = 0;
       y = 0;
     };
-    wallpaper = ../../assets/wallpapers/night-mountains.png;
+    # wallpaper = ../../assets/wallpapers/night-mountains.png;
+    wallpaper = ../../assets/wallpapers/vector-canyon.jpg;
     hyprlandWorkspaces = [ "1" ];
   };
   HDMI-A-2 = {

@@ -6,7 +6,7 @@
 }: let
   python = pkgs.python3.withPackages (ps: [ps.tomlkit]);
   connectors = pkgs.writeText "monitor-connectors.json" (builtins.toJSON (builtins.attrNames config.desktop.monitors));
-  displays = import ../lib/monitors.nix {inherit lib;} config.desktop.monitors;
+  displays = import ../lib/monitors.nix {inherit lib pkgs;} config.desktop.monitors;
 in {
   imports = [../modules/monitors.nix];
 
