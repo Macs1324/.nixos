@@ -16,6 +16,19 @@ in {
     # The palette is generated from the leftmost monitor's wallpaper.
     image = displays.themeWallpaper;
     polarity = "dark";
+    # Stylix's generator only samples accents from the image, so a wallpaper
+    # with few hues gives repeated, near-monochrome accents. Keep its neutrals
+    # and give every accent slot its own hue (lib/palette.py).
+    base16Scheme =
+      lib.importJSON (import ../lib/palette.nix {inherit pkgs;} {
+        inherit (config.stylix) image polarity;
+        generated = config.stylix.generated.json;
+      })
+      // {
+        author = "Stylix";
+        scheme = "Stylix";
+        slug = "stylix";
+      };
 
     fonts = {
       monospace = {
