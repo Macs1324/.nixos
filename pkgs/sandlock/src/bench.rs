@@ -30,17 +30,22 @@ pub(crate) struct Options {
     pub(crate) images: Vec<PathBuf>,
     /// Simulated seconds of the unpaced run.
     pub(crate) secs: f32,
-    /// Real seconds of the paced 60 fps power run (0 = skip).
+    /// Real seconds of the paced power run (0 = skip).
     pub(crate) paced: f32,
+    /// Frames (and simulation steps) per second (the unlock always runs at
+    /// 60).
+    pub(crate) fps: f32,
 }
 
 impl Default for Options {
     fn default() -> Self {
-        Self { images: Vec::new(), secs: 60.0, paced: 20.0 }
+        Self { images: Vec::new(), secs: 60.0, paced: 20.0, fps: 60.0 }
     }
 }
 
 struct Scene {
+    /// Seconds per frame (and simulation step).
+    dt: f32,
     gpu: Gpu,
     sim: Sim,
     storm: Storm,
@@ -51,8 +56,8 @@ struct Scene {
 impl Scene {
     /// One displayed frame: a simulation step, then every output drawn.
     fn frame(&mut self) {
-        let splats = self.storm.step(DT, &mut self.sim.params);
-        self.sim.step(&self.gpu, DT, &splats);
+        let splats = self.storm.step(self.dt, &mut self.sim.params);
+        self.sim.step(&self.gpu, self.dt, &splats);
         let dots = self.storm.dots();
         for widget in &mut self.live {
             if let Some(t) = widget.update(&dots) {
@@ -70,8 +75,8 @@ impl Scene {
     /// every output take.
     fn frame_phases(&mut self) -> anyhow::Result<[Duration; 3]> {
         let t0 = Instant::now();
-        let splats = self.storm.step(DT, &mut self.sim.params);
-        self.sim.step(&self.gpu, DT, &splats);
+        let splats = self.storm.step(self.dt, &mut self.sim.params);
+        self.sim.step(&self.gpu, self.dt, &splats);
         self.wait()?;
         let t1 = Instant::now();
         self.sim.rasterize(&self.gpu);
@@ -163,7 +168,7 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
             (compose, texture, view)
         })
         .collect();
-    let mut scene = Scene { gpu, sim, storm, live, outputs };
+    let mut scene = Scene { dt: 1.0 / opts.fps.max(1.0), gpu, sim, storm, live, outputs };
     // SANDLOCK_BENCH_TYPE=<n>: type n characters from 3 s on, one every
     // 0.15 s, to see and time the password dots.
     let typed: u32 = std::env::var("SANDLOCK_BENCH_TYPE").ok().and_then(|n| n.parse().ok()).unwrap_or(0);
@@ -177,7 +182,7 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
     );
 
     // Unpaced: GPU cost per frame, and the picture at the checkpoints.
-    let frames = (opts.secs / DT).round() as usize;
+    let frames = (opts.secs / scene.dt).round() as usize;
     let mut times = Vec::with_capacity(frames);
     let mut next = CHECKPOINTS.iter().copied().filter(|&t| t <= opts.secs).peekable();
     for f in 1..=frames {
@@ -188,10 +193,10 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
         scene.frame();
         scene.wait()?;
         // The first second warms up clocks and caches.
-        if f > 60 {
+        if f as f32 * scene.dt > 1.0 {
             times.push(start.elapsed());
         }
-        if next.peek().is_some_and(|&t| f as f32 * DT >= t - DT / 2.0) {
+        if next.peek().is_some_and(|&t| f as f32 * scene.dt >= t - scene.dt / 2.0) {
             let t = next.next().unwrap_or_default();
             let owner = scene.sim.read_owner(&scene.gpu)?;
             let m = measure(&owner, canvas, &images, &places);
@@ -283,6 +288,8 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
     if opts.paced > 0.0 {
         paced(&mut scene, opts.paced)?;
     }
+    // The recompose always plays at the full rate.
+    scene.dt = DT;
     unlock(&mut scene, &images)
 }
 
@@ -623,7 +630,7 @@ fn paced(scene: &mut Scene, secs: f32) -> anyhow::Result<()> {
     while start.elapsed().as_secs_f32() < secs {
         scene.frame();
         scene.wait()?;
-        next_frame += Duration::from_secs_f32(DT);
+        next_frame += Duration::from_secs_f32(scene.dt);
         let now = Instant::now();
         if now >= next_sample {
             running.add(sensors.sample());
@@ -633,6 +640,6 @@ fn paced(scene: &mut Scene, secs: f32) -> anyhow::Result<()> {
             std::thread::sleep(left);
         }
     }
-    running.report("storm @60 fps");
+    running.report(&format!("storm @{:.0} fps", 1.0 / scene.dt));
     Ok(())
 }

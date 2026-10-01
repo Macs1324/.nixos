@@ -58,10 +58,6 @@ use gpu::{Gpu, OutputGfx, Place, Sim};
 use storm::{Phase, Storm, HOMING_DONE};
 
 const PAM_SERVICE: &str = "sandlock";
-const SIM_DT: f32 = 1.0 / 60.0;
-/// The storm looks no different above 60 fps; rendering faster only heats
-/// the GPU.
-const FRAME_INTERVAL: Duration = Duration::from_micros(16_667);
 const FADE: f32 = 0.35;
 
 enum Key {
@@ -111,10 +107,10 @@ impl Screen {
     }
 
     /// Draws a frame (after `Sim::rasterize`) and asks for the next callback.
-    fn draw(&mut self, now: Instant, qh: &QueueHandle<App>, gpu: &Gpu, sim: &Sim, alpha: f32) {
+    fn draw(&mut self, now: Instant, qh: &QueueHandle<App>, gpu: &Gpu, sim: &Sim, alpha: f32, interval: Duration) {
         let Some(gfx) = &mut self.gfx else { return };
         // Keep a steady cadence, but don't try to catch up after a stall.
-        self.due = (self.due + FRAME_INTERVAL).max(now + FRAME_INTERVAL / 2);
+        self.due = (self.due + interval).max(now + interval / 2);
         let surface = self.role.wl_surface();
         surface.frame(qh, FrameCallbackData(surface.clone()));
         self.waiting = Some(now);
@@ -122,16 +118,17 @@ impl Screen {
     }
 }
 
-/// Draws every screen that is due at `alpha` (the unlock fade), rasterising
-/// the grains once for all of them; returns whether anything was drawn.
-fn draw_due(screens: &mut [Screen], qh: &QueueHandle<App>, gpu: &Gpu, sim: &Sim, alpha: f32) -> bool {
+/// Draws every screen that is due at `alpha` (the unlock fade), one frame
+/// per `interval`, rasterising the grains once for all of them; returns
+/// whether anything was drawn.
+fn draw_due(screens: &mut [Screen], qh: &QueueHandle<App>, gpu: &Gpu, sim: &Sim, alpha: f32, interval: Duration) -> bool {
     let now = Instant::now();
     if !screens.iter().any(|s| s.due(now)) {
         return false;
     }
     sim.rasterize(gpu);
     for screen in screens.iter_mut().filter(|s| s.due(now)) {
-        screen.draw(now, qh, gpu, sim, alpha);
+        screen.draw(now, qh, gpu, sim, alpha, interval);
     }
     true
 }
@@ -186,6 +183,7 @@ fn main() -> anyhow::Result<()> {
             }
             "--bench-secs" => bench.secs = args.next().context("--bench-secs needs seconds")?.parse()?,
             "--bench-paced" => bench.paced = args.next().context("--bench-paced needs seconds")?.parse()?,
+            "--bench-fps" => bench.fps = args.next().context("--bench-fps needs a rate")?.parse()?,
             other => bail!(
                 "unknown argument {other:?} (usage: sandlock [-f] [--preview] [--config <file>] \
                  [--bench a.png,b.png [--bench-secs N] [--bench-paced N]])"
@@ -390,6 +388,9 @@ fn main() -> anyhow::Result<()> {
     let mut stats_since = Instant::now();
     let mut last_shown = Instant::now();
     let mut announced = false;
+    // Locking counts as input: the dissolve plays at the full rate.
+    let mut last_input = Instant::now();
+    let rates = config.display;
     loop {
         // Short waits keep input responsive whether or not frames are due.
         event_loop.dispatch(Duration::from_millis(2), &mut app)?;
@@ -397,6 +398,9 @@ fn main() -> anyhow::Result<()> {
             bail!("a surface was closed by the compositor");
         }
 
+        if !app.keys.is_empty() || !app.pointer_moves.is_empty() {
+            last_input = Instant::now();
+        }
         for key in std::mem::take(&mut app.keys) {
             if storm.phase != Phase::Storm {
                 continue;
@@ -452,21 +456,28 @@ fn main() -> anyhow::Result<()> {
             }
         }
 
+        // Full rate while someone is there (typing, moving the mouse, the
+        // password being checked, the recompose); after a while without
+        // input, nobody is likely watching: a lower rate, for both frames
+        // and simulation steps, roughly halves the GPU's work.
+        let active = last_input.elapsed().as_secs_f32() < rates.idle_after || storm.phase != Phase::Storm;
+        let step = 1.0 / if active { rates.fps } else { rates.idle_fps };
+
         // Fixed-step simulation, catching up with real time. While no screen
         // has been drawn for a while (outputs asleep), the storm pauses
         // instead of keeping the GPU busy; homing always finishes.
         let now = Instant::now();
         let visible = now - last_shown < Duration::from_millis(500) || storm.homing_for().is_some();
         backlog = if visible {
-            (backlog + (now - last).as_secs_f32()).min(SIM_DT * 6.0)
+            (backlog + (now - last).as_secs_f32()).min(step * 6.0)
         } else {
             0.0
         };
         last = now;
-        while backlog >= SIM_DT {
-            let splats = storm.step(SIM_DT, &mut sim.params);
-            sim.step(&gpu, SIM_DT, &splats);
-            backlog -= SIM_DT;
+        while backlog >= step {
+            let splats = storm.step(step, &mut sim.params);
+            sim.step(&gpu, step, &splats);
+            backlog -= step;
         }
 
         // Live attractors (clock, Game of Life, password dots): only what
@@ -477,7 +488,7 @@ fn main() -> anyhow::Result<()> {
                 sim.update_target(&gpu, &t);
             }
         }
-        let drew = draw_due(&mut app.screens, &qh, &gpu, &sim, 1.0);
+        let drew = draw_due(&mut app.screens, &qh, &gpu, &sim, 1.0, Duration::from_secs_f32(step));
         if drew {
             last_shown = now;
             frames += 1;
@@ -523,7 +534,7 @@ fn main() -> anyhow::Result<()> {
             &places,
         )?;
     }
-    fade(&mut app, &mut event_loop, &qh, &gpu, &sim)?;
+    fade(&mut app, &mut event_loop, &qh, &gpu, &sim, Duration::from_secs_f32(1.0 / rates.fps))?;
     Ok(())
 }
 
@@ -697,6 +708,7 @@ fn fade(
     qh: &QueueHandle<App>,
     gpu: &Gpu,
     sim: &Sim,
+    interval: Duration,
 ) -> anyhow::Result<()> {
     let start = Instant::now();
     loop {
@@ -706,7 +718,7 @@ fn fade(
             break;
         }
         let alpha = 1.0 - t * t * (3.0 - 2.0 * t);
-        draw_due(&mut app.screens, qh, gpu, sim, alpha);
+        draw_due(&mut app.screens, qh, gpu, sim, alpha, interval);
     }
     app.screens.clear();
     app.conn.roundtrip()?;

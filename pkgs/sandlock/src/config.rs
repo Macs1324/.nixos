@@ -10,6 +10,7 @@ use serde::Deserialize;
 #[serde(default, deny_unknown_fields)]
 pub(crate) struct Config {
     pub(crate) storm: Storm,
+    pub(crate) display: Display,
     /// `[[attractor]]` entries, drawn in order (later ones win on overlap).
     #[serde(rename = "attractor")]
     pub(crate) attractors: Vec<Attractor>,
@@ -79,6 +80,25 @@ pub(crate) struct Life {
 impl Default for Life {
     fn default() -> Self {
         Self { cell: 40.0, period: 1.5, fill: 0.3 }
+    }
+}
+
+/// How often the storm is simulated and drawn.
+#[derive(Debug, Clone, Copy, Deserialize)]
+#[serde(default, deny_unknown_fields)]
+pub(crate) struct Display {
+    /// Frames (and simulation steps) per second while someone is there.
+    pub(crate) fps: f32,
+    /// ... and after `idle_after` seconds without a key or the mouse:
+    /// nobody is likely watching, and 30 instead of 60 roughly halves the
+    /// GPU's work.
+    pub(crate) idle_fps: f32,
+    pub(crate) idle_after: f32,
+}
+
+impl Default for Display {
+    fn default() -> Self {
+        Self { fps: 60.0, idle_fps: 30.0, idle_after: 30.0 }
     }
 }
 
@@ -262,6 +282,11 @@ pub(crate) fn load(path: &Path) -> anyhow::Result<Config> {
             "storm.{name} must be a number >= 0"
         );
     }
+    let d = config.display;
+    anyhow::ensure!(
+        [d.fps, d.idle_fps].iter().all(|f| (1.0..=240.0).contains(f)) && d.idle_after >= 0.0,
+        "display: fps and idle_fps must be 1..240, idle_after >= 0"
+    );
     for a in &config.attractors {
         anyhow::ensure!(
             a.sources() == 1,
