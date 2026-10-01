@@ -306,6 +306,9 @@ in {
         "Ctrl+Alt+L" = {
           action.spawn-sh = config.desktop.apps.lock;
           hotkey-overlay.title = "Lock the Screen";
+          # If sandlock dies while locked, this starts a new one to unlock
+          # with; with a lock running it exits at once.
+          allow-when-locked = true;
         };
 
         # Volume controls
