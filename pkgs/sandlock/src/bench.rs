@@ -305,24 +305,54 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
     }
     // The recompose always plays at the full rate.
     scene.dt = DT;
-    unlock(&mut scene, &images)
+    unlock(&mut scene, &images, &places)
 }
 
 /// The correct password: the grains fly home. Saves frames on the way
 /// (`SANDLOCK_BENCH_DUMP`) and checks the last frame is the screenshot,
 /// exactly, as the handoff to the live desktop needs.
-fn unlock(scene: &mut Scene, images: &[Image]) -> anyhow::Result<()> {
+fn unlock(scene: &mut Scene, images: &[Image], places: &[Place]) -> anyhow::Result<()> {
     let dir = std::env::var_os("SANDLOCK_BENCH_DUMP").map(PathBuf::from);
     // Every other frame of the primary output with SANDLOCK_BENCH_UNLOCK_ALL
     // (for an animation), else a few stills.
     let all = std::env::var_os("SANDLOCK_BENCH_UNLOCK_ALL").is_some();
     let mut stops = [0.2, 0.45, 0.8, 1.3, 1.9].into_iter().peekable();
     let mut n = 0u32;
+    // On the way home: black pixels (no grain within 2 px), and grains on or
+    // near their own pixel (1.25 s: just before every grain is put home).
+    let mut gaps = [0.1, 0.3, 0.5, 0.7, 0.9, 1.1, 1.25].into_iter().peekable();
+    let mut times = Vec::new();
+    println!();
+    scene.sim.profiler = crate::gpu::Profiler::new(&scene.gpu);
+    let mut passes: Vec<(&'static str, f64)> = Vec::new();
     scene.storm.correct();
     while scene.storm.homing_for().is_some_and(|t| t < HOMING_DONE) {
+        let start = Instant::now();
         scene.frame();
+        scene.wait()?;
+        times.push(start.elapsed());
+        if let Some(profiler) = &scene.sim.profiler {
+            for (label, ms) in profiler.take(&scene.gpu)? {
+                match passes.iter_mut().find(|(l, _)| *l == label) {
+                    Some((_, t)) => *t = t.max(ms),
+                    None => passes.push((label, ms)),
+                }
+            }
+        }
         let t = scene.storm.homing_for().unwrap_or(HOMING_DONE);
         n += 1;
+        if gaps.peek().is_some_and(|&g| t >= g) {
+            gaps.next();
+            let sp = splats(&scene.sim.read_packed(&scene.gpu)?, scene.sim.canvas, places);
+            let m = measure(&scene.sim.read_owner(&scene.gpu)?, scene.sim.canvas, images, places);
+            println!(
+                "unlock t={t:.2} s: black {:>5.2}% / {:>5.2}% (edge / inner), shown grains home {:>5.1}%, near home {:>5.1}%",
+                sp.black[0] * 100.0,
+                sp.black[1] * 100.0,
+                m.clear * 100.0,
+                m.home * 100.0
+            );
+        }
         if let Some(dir) = &dir
             && all
         {
@@ -341,7 +371,18 @@ fn unlock(scene: &mut Scene, images: &[Image]) -> anyhow::Result<()> {
             }
         }
     }
-    scene.wait()?;
+    let ms: Vec<f64> = times.iter().map(|d| d.as_secs_f64() * 1000.0).collect();
+    println!(
+        "unlock frames: mean {:.2} ms, worst {:.2} ms (first {:.2} ms)",
+        ms.iter().sum::<f64>() / ms.len().max(1) as f64,
+        ms.iter().copied().fold(0.0, f64::max),
+        ms.first().copied().unwrap_or(0.0)
+    );
+    println!("unlock passes, worst frame each:");
+    for (label, ms) in &passes {
+        println!("  {label:<24} {ms:>7.3} ms");
+    }
+    scene.sim.profiler = None;
     let (mut differ, mut total) = (0u64, 0u64);
     for ((compose, texture, _), img) in scene.outputs.iter().zip(images) {
         let bgra = read_texture(&scene.gpu, texture, compose.place.size)?;
