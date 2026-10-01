@@ -184,6 +184,8 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
     // Unpaced: GPU cost per frame, and the picture at the checkpoints.
     let frames = (opts.secs / scene.dt).round() as usize;
     let mut times = Vec::with_capacity(frames);
+    // The dissolve right after locking: what a lag spike at startup costs.
+    let mut dissolve = Vec::new();
     let mut next = CHECKPOINTS.iter().copied().filter(|&t| t <= opts.secs).peekable();
     for f in 1..=frames {
         if f >= 180 && (f - 180) % 9 == 0 && ((f - 180) / 9) < typed as usize {
@@ -195,6 +197,9 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
         // The first second warms up clocks and caches.
         if f as f32 * scene.dt > 1.0 {
             times.push(start.elapsed());
+        }
+        if f as f32 * scene.dt <= 2.0 {
+            dissolve.push(start.elapsed());
         }
         if next.peek().is_some_and(|&t| f as f32 * scene.dt >= t - scene.dt / 2.0) {
             let t = next.next().unwrap_or_default();
@@ -233,9 +238,19 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
             );
         }
     }
+    let ms = |d: Duration| d.as_secs_f64() * 1000.0;
+    if let Some(worst) = dissolve.iter().max() {
+        let mean = dissolve.iter().map(|&d| ms(d)).sum::<f64>() / dissolve.len() as f64;
+        let over = dissolve.iter().filter(|d| ms(**d) > 1000.0 / 60.0).count();
+        println!();
+        println!(
+            "dissolve (first 2 s, {} frames): mean {mean:.2} ms, worst {:.2} ms, {over} over a 60 fps frame",
+            dissolve.len(),
+            ms(*worst)
+        );
+    }
     times.sort();
     if !times.is_empty() {
-        let ms = |d: Duration| d.as_secs_f64() * 1000.0;
         let mean = times.iter().map(|&d| ms(d)).sum::<f64>() / times.len() as f64;
         let pct = |q: f64| ms(times[((times.len() - 1) as f64 * q) as usize]);
         println!();

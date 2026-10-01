@@ -113,12 +113,19 @@ fn quiet_at(h: vec2<f32>) -> f32 {
     return mix(top, bottom, f.y);
 }
 
-fn count(pos: vec2<f32>) {
-    if (P.density <= 0.0) { return; }
+// Counts a sample of the grains, a different eighth every step, each for
+// COUNT_SAMPLE: with every grain counting, the atomics cost several ms per
+// step on some GPUs (Intel Arc: 4.7 of 12.5 ms, and much worse while grains
+// still sit at home, where neighbouring threads all hit the same cell). A
+// cell holds hundreds of grains, so the sample changes nothing visible.
+const COUNT_SAMPLE: u32 = 8u;
+
+fn count(pos: vec2<f32>, i: u32) {
+    if (P.density <= 0.0 || i % COUNT_SAMPLE != P.seed % COUNT_SAMPLE) { return; }
     let cell = vec2<f32>(P.cell_x, P.cell);
     let size = vec2<u32>(textureDimensions(phi));
     let c = min(vec2<u32>(pos / cell), size - 1u);
-    atomicAdd(&counts[c.y * size.x + c.x], 1u);
+    atomicAdd(&counts[c.y * size.x + c.x], COUNT_SAMPLE);
 }
 
 // Per-grain randomness from its index (PCG): cheaper than hashing positions.
@@ -153,7 +160,7 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
         let release = P.release_start + P.release_dur * (0.1 + 0.9 * n) + 0.15 * ihash(i, 1u);
         if (P.time < release) {
             grains[i] = vec4<f32>(h, 0.0, 0.0);
-            count(h);
+            count(h, i);
             return;
         }
     }
@@ -256,6 +263,6 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
         v = vec2<f32>(0.0);
     }
     grains[i] = vec4<f32>(pos, v);
-    count(pos);
+    count(pos, i);
 
 }
