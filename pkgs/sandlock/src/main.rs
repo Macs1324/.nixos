@@ -288,7 +288,7 @@ fn main() -> anyhow::Result<()> {
     log::info!("canvas {}x{}, outputs {places:?}", canvas[0], canvas[1]);
 
     // GPU setup before locking, so the first locked frame is ready at once.
-    let gpu = Gpu::new()?;
+    let gpu = Gpu::new(false)?;
     let mut sim = Sim::new(&gpu, canvas, &places, &images)?;
 
     let primary = (0..places.len())

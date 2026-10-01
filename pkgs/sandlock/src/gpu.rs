@@ -117,7 +117,9 @@ pub(crate) struct Gpu {
 }
 
 impl Gpu {
-    pub(crate) fn new() -> anyhow::Result<Self> {
+    /// `timestamps`: also ask for GPU timestamps, for profiling (`--bench`),
+    /// if the adapter has them.
+    pub(crate) fn new(timestamps: bool) -> anyhow::Result<Self> {
         let instance = wgpu::Instance::new(wgpu::InstanceDescriptor {
             backends: wgpu::Backends::VULKAN,
             ..wgpu::InstanceDescriptor::new_without_display_handle()
@@ -133,6 +135,11 @@ impl Gpu {
         let (device, queue) = pollster::block_on(adapter.request_device(&wgpu::DeviceDescriptor {
             label: Some("sandlock"),
             required_limits: adapter.limits(),
+            required_features: if timestamps {
+                adapter.features() & wgpu::Features::TIMESTAMP_QUERY
+            } else {
+                wgpu::Features::empty()
+            },
             ..Default::default()
         }))
         .context("requesting GPU device")?;
@@ -392,6 +399,8 @@ pub(crate) struct Sim {
     rects: Vec<[u32; 4]>,
     rect_group: Option<wgpu::BindGroup>,
     counts: wgpu::Buffer,
+    /// GPU timestamps around every pass (`--bench` only).
+    pub(crate) profiler: Option<Profiler>,
     dsource: Pass,
     phi: [Pass; 2],
     quiet_map: Pass,
@@ -926,6 +935,7 @@ impl Sim {
             rects: Vec::new(),
             rect_group: None,
             counts,
+            profiler: None,
             dsource,
             phi: phi_pass,
             quiet_map,
@@ -1000,10 +1010,13 @@ impl Sim {
         let mut encoder = gpu.device.create_command_encoder(&Default::default());
         encoder.clear_buffer(&self.owner, 0, None);
         {
-            let mut cpass = encoder.begin_compute_pass(&Default::default());
+            let mut cpass = begin(&mut encoder, &self.profiler, "scatter");
             cpass.set_pipeline(&self.scatter.pipeline);
             cpass.set_bind_group(0, &self.scatter.group, &[]);
             cpass.dispatch_workgroups(self.grain_groups[0], self.grain_groups[1], 1);
+        }
+        {
+            let mut cpass = begin(&mut encoder, &self.profiler, "pack");
             cpass.set_pipeline(&self.pack.pipeline);
             cpass.set_bind_group(0, &self.pack.group, &[]);
             // Per pixel: the owner is read in order and every pixel written,
@@ -1074,70 +1087,146 @@ impl Sim {
             .write_buffer(&self.splats_buf, 0, bytemuck::bytes_of(&data));
 
         let mut encoder = gpu.device.create_command_encoder(&Default::default());
-        {
-            let mut cpass = encoder.begin_compute_pass(&Default::default());
-            let gx = self.grid[0].div_ceil(16);
-            let gy = self.grid[1].div_ceil(16);
-            let mut run = |p: &Pass| {
-                cpass.set_pipeline(&p.pipeline);
-                cpass.set_bind_group(0, &p.group, &[]);
-                cpass.dispatch_workgroups(gx, gy, 1);
-            };
-            if dt > 0.0 {
-                run(&self.advect);
-                run(&self.splat);
-                run(&self.curl);
-                run(&self.vorticity);
-                run(&self.divergence);
-                // Warm-started from the previous step (no decay), so
-                // large-scale compression converges over successive steps.
-                for i in 0..SOLVER_ITERS {
-                    run(&self.pressure[i % 2]);
-                }
-                run(&self.gradient);
-                // Stream function of the final velocity: its curl is exactly
-                // incompressible even where psi is only approximate.
-                run(&self.curl);
-                for i in 0..SOLVER_ITERS {
-                    run(&self.stream[i % 2]);
-                }
-                if self.params.density > 0.0 {
-                    // From the grains the previous step counted.
-                    run(&self.dsource);
-                    for i in 0..DENSITY_ITERS {
-                        run(&self.phi[i % 2]);
-                    }
-                }
+        let (gx, gy) = (self.grid[0].div_ceil(16), self.grid[1].div_ceil(16));
+        let run = |cpass: &mut wgpu::ComputePass, p: &Pass| {
+            cpass.set_pipeline(&p.pipeline);
+            cpass.set_bind_group(0, &p.group, &[]);
+            cpass.dispatch_workgroups(gx, gy, 1);
+        };
+        if dt > 0.0 {
+            let mut cpass = begin(&mut encoder, &self.profiler, "fluid");
+            run(&mut cpass, &self.advect);
+            run(&mut cpass, &self.splat);
+            run(&mut cpass, &self.curl);
+            run(&mut cpass, &self.vorticity);
+            run(&mut cpass, &self.divergence);
+            // Warm-started from the previous step (no decay), so
+            // large-scale compression converges over successive steps.
+            for i in 0..SOLVER_ITERS {
+                run(&mut cpass, &self.pressure[i % 2]);
+            }
+            run(&mut cpass, &self.gradient);
+            // Stream function of the final velocity: its curl is exactly
+            // incompressible even where psi is only approximate.
+            run(&mut cpass, &self.curl);
+            for i in 0..SOLVER_ITERS {
+                run(&mut cpass, &self.stream[i % 2]);
+            }
+        }
+        if dt > 0.0 && self.params.density > 0.0 {
+            // From the grains the previous step counted.
+            let mut cpass = begin(&mut encoder, &self.profiler, "density");
+            run(&mut cpass, &self.dsource);
+            for i in 0..DENSITY_ITERS {
+                run(&mut cpass, &self.phi[i % 2]);
             }
         }
         // Counted afresh by this step's grains pass.
         encoder.clear_buffer(&self.counts, 0, None);
         {
-            let mut cpass = encoder.begin_compute_pass(&Default::default());
-            let gx = self.grid[0].div_ceil(16);
-            let gy = self.grid[1].div_ceil(16);
-            cpass.set_pipeline(&self.turbulence.pipeline);
-            cpass.set_bind_group(0, &self.turbulence.group, &[]);
+            let mut cpass = begin(&mut encoder, &self.profiler, "turbulence + quiet map");
             // Always, so the first step (dt = 0) also fills what grains read.
-            cpass.dispatch_workgroups(gx, gy, 1);
+            run(&mut cpass, &self.turbulence);
             if self.params.quiet[3] > 0.0 {
-                cpass.set_pipeline(&self.quiet_map.pipeline);
-                cpass.set_bind_group(0, &self.quiet_map.group, &[]);
-                cpass.dispatch_workgroups(gx, gy, 1);
+                run(&mut cpass, &self.quiet_map);
             }
-            if let Some(rect_group) = &self.rect_group {
-                cpass.set_pipeline(&self.recruit.pipeline);
-                cpass.set_bind_group(0, &self.recruit.group, &[]);
-                for (k, r) in self.rects.iter().enumerate() {
-                    cpass.set_bind_group(1, rect_group, &[(k as u64 * RECT_SLOT) as u32]);
-                    cpass.dispatch_workgroups(r[2].div_ceil(16), r[3].div_ceil(16), 1);
-                }
+        }
+        if let Some(rect_group) = &self.rect_group {
+            let mut cpass = begin(&mut encoder, &self.profiler, "recruit");
+            cpass.set_pipeline(&self.recruit.pipeline);
+            cpass.set_bind_group(0, &self.recruit.group, &[]);
+            for (k, r) in self.rects.iter().enumerate() {
+                cpass.set_bind_group(1, rect_group, &[(k as u64 * RECT_SLOT) as u32]);
+                cpass.dispatch_workgroups(r[2].div_ceil(16), r[3].div_ceil(16), 1);
             }
+        }
+        {
+            let mut cpass = begin(&mut encoder, &self.profiler, "grains");
             cpass.set_pipeline(&self.grains_pass.pipeline);
             cpass.set_bind_group(0, &self.grains_pass.group, &[]);
             cpass.dispatch_workgroups(self.grain_groups[0], self.grain_groups[1], 1);
         }
         gpu.queue.submit([encoder.finish()]);
+    }
+}
+
+/// Begins a compute pass, timed under `label` when profiling.
+fn begin<'e>(encoder: &'e mut wgpu::CommandEncoder, profiler: &Option<Profiler>, label: &'static str) -> wgpu::ComputePass<'e> {
+    let timestamp_writes = profiler.as_ref().and_then(|p| p.slots(label)).map(|(set, a, b)| {
+        wgpu::ComputePassTimestampWrites {
+            query_set: set,
+            beginning_of_pass_write_index: Some(a),
+            end_of_pass_write_index: Some(b),
+        }
+    });
+    encoder.begin_compute_pass(&wgpu::ComputePassDescriptor { label: Some(label), timestamp_writes })
+}
+
+/// GPU timestamps at the start and end of passes, collected per frame:
+/// where the GPU time goes (`--bench`).
+pub(crate) struct Profiler {
+    set: wgpu::QuerySet,
+    resolved: wgpu::Buffer,
+    labels: std::cell::RefCell<Vec<&'static str>>,
+    period_ns: f32,
+}
+
+impl Profiler {
+    const PASSES: u32 = 32;
+
+    /// None unless the device was created with timestamps.
+    pub(crate) fn new(gpu: &Gpu) -> Option<Self> {
+        if !gpu.device.features().contains(wgpu::Features::TIMESTAMP_QUERY) {
+            return None;
+        }
+        Some(Self {
+            set: gpu.device.create_query_set(&wgpu::QuerySetDescriptor {
+                label: Some("profiler"),
+                ty: wgpu::QueryType::Timestamp,
+                count: 2 * Self::PASSES,
+            }),
+            resolved: gpu.device.create_buffer(&wgpu::BufferDescriptor {
+                label: Some("profiler"),
+                size: u64::from(2 * Self::PASSES) * 8,
+                usage: wgpu::BufferUsages::QUERY_RESOLVE | wgpu::BufferUsages::COPY_SRC,
+                mapped_at_creation: false,
+            }),
+            labels: Default::default(),
+            period_ns: gpu.queue.get_timestamp_period(),
+        })
+    }
+
+    /// The query set and the two slots a pass named `label` writes.
+    fn slots(&self, label: &'static str) -> Option<(&wgpu::QuerySet, u32, u32)> {
+        let mut labels = self.labels.borrow_mut();
+        let k = labels.len() as u32;
+        if k == Self::PASSES {
+            return None;
+        }
+        labels.push(label);
+        Some((&self.set, 2 * k, 2 * k + 1))
+    }
+
+    /// Milliseconds per pass label since the last call. Blocks on the GPU.
+    pub(crate) fn take(&self, gpu: &Gpu) -> anyhow::Result<Vec<(&'static str, f64)>> {
+        let labels = std::mem::take(&mut *self.labels.borrow_mut());
+        if labels.is_empty() {
+            return Ok(Vec::new());
+        }
+        let n = 2 * labels.len() as u32;
+        let mut encoder = gpu.device.create_command_encoder(&Default::default());
+        encoder.resolve_query_set(&self.set, 0..n, &self.resolved, 0);
+        gpu.queue.submit([encoder.finish()]);
+        let words = read_back(gpu, &self.resolved, u64::from(n) * 8)?;
+        let ticks: Vec<u64> = words.chunks(2).map(|w| u64::from(w[0]) | (u64::from(w[1]) << 32)).collect();
+        Ok(labels
+            .iter()
+            .enumerate()
+            .map(|(k, &l)| {
+                let d = ticks[2 * k + 1].saturating_sub(ticks[2 * k]);
+                (l, d as f64 * f64::from(self.period_ns) / 1e6)
+            })
+            .collect())
     }
 }
 
@@ -1255,7 +1344,13 @@ impl Compose {
                     },
                 })],
                 depth_stencil_attachment: None,
-                timestamp_writes: None,
+                timestamp_writes: sim.profiler.as_ref().and_then(|p| p.slots("compose")).map(|(set, a, b)| {
+                    wgpu::RenderPassTimestampWrites {
+                        query_set: set,
+                        beginning_of_pass_write_index: Some(a),
+                        end_of_pass_write_index: Some(b),
+                    }
+                }),
                 occlusion_query_set: None,
                 multiview_mask: None,
             });

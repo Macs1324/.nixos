@@ -108,7 +108,7 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
     // Startup, as the lock pays it before the screen is locked (screenshots
     // aside): `sandlock -f` gives up after 4 s and the fallback locks instead.
     let t0 = Instant::now();
-    let gpu = Gpu::new()?;
+    let gpu = Gpu::new(true)?;
     let t_gpu = t0.elapsed();
     let shots: Vec<_> = images.iter().map(|i| Some(Image { width: i.width, height: i.height, bgra: i.bgra.clone() })).collect();
     let mut sim = Sim::new(&gpu, canvas, &places, &shots)?;
@@ -241,6 +241,32 @@ pub(crate) fn run(config: &Config, opts: &Options) -> anyhow::Result<()> {
             pct(0.95),
             mean / (1000.0 / 60.0) * 100.0
         );
+    }
+
+    // Where the GPU time goes, pass by pass.
+    scene.sim.profiler = crate::gpu::Profiler::new(&scene.gpu);
+    if scene.sim.profiler.is_some() {
+        const FRAMES: u32 = 300;
+        let mut totals: Vec<(&'static str, f64)> = Vec::new();
+        for _ in 0..FRAMES {
+            scene.frame();
+            let Some(profiler) = &scene.sim.profiler else { break };
+            for (label, ms) in profiler.take(&scene.gpu)? {
+                match totals.iter_mut().find(|(l, _)| *l == label) {
+                    Some((_, t)) => *t += ms,
+                    None => totals.push((label, ms)),
+                }
+            }
+        }
+        let sum: f64 = totals.iter().map(|(_, t)| t).sum();
+        println!();
+        println!("GPU passes, per frame ({FRAMES} frames, timestamps):");
+        for (label, t) in &totals {
+            let ms = t / f64::from(FRAMES);
+            println!("  {label:<24} {ms:>6.3} ms  {:>4.1}%", t / sum * 100.0);
+        }
+        println!("  {:<24} {:>6.3} ms", "total in passes", sum / f64::from(FRAMES));
+        scene.sim.profiler = None;
     }
 
     // Where the time goes (the waits between phases add a little).
