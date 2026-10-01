@@ -207,12 +207,8 @@ pub(crate) struct Storm {
     pub(crate) eruption: f32,
     /// How strongly moving the mouse stirs the storm. 0 = off.
     pub(crate) mouse: f32,
-    /// Seconds per tide: a band sweeping across the screens in which the
-    /// desktop reassembles and then erodes again, so the storm never mixes
-    /// into one soup. 0 = off.
-    pub(crate) tide: f32,
     /// How fast grains spread from crowded areas into thinned-out ones
-    /// (1/s), so pulls like tides and attractors leave no empty patches.
+    /// (1/s), so pulls like quiet zones and attractors leave no empty patches.
     /// 0 = off.
     pub(crate) density: f32,
     /// Share of the desktop at rest at any moment, in quiet zones scattered
@@ -237,7 +233,6 @@ impl Default for Storm {
             swirl: 0.35,
             eruption: 1.0,
             mouse: 1.0,
-            tide: 0.0,
             density: 4.0,
             quiet: 0.3,
             quiet_size: 150.0,
@@ -270,7 +265,6 @@ pub(crate) fn load(path: &Path) -> anyhow::Result<Config> {
         ("swirl", config.storm.swirl),
         ("eruption", config.storm.eruption),
         ("mouse", config.storm.mouse),
-        ("tide", config.storm.tide),
         ("density", config.storm.density),
         ("quiet", config.storm.quiet),
         ("quiet_size", config.storm.quiet_size),

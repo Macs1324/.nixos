@@ -253,29 +253,8 @@ impl Storm {
         }
     }
 
-    /// The tide band for this step: it sweeps left to right once per `period`
-    /// seconds (after the storm has had one period to develop), fading in
-    /// and out at the edges; it holds off while the storm is hot after a
-    /// wrong password.
-    fn tide(&self, period: f32, storming: bool) -> [f32; 4] {
-        if period <= 0.0 || !storming {
-            return [0.0; 4];
-        }
-        let half = self.canvas[0].max(self.canvas[1]) * 0.12;
-        let t = self.time - RELEASE_DELAY - period * 0.6;
-        if t < 0.0 {
-            return [0.0; 4];
-        }
-        let phase = (t / period).fract();
-        let travel = self.canvas[0] + 4.0 * half;
-        let centre = -2.0 * half + phase * travel;
-        let calm = 1.0 / (1.0 + 2.0 * self.entropy);
-        [centre, half, calm, 0.0]
-    }
-
     /// Quiet zones for this step (see `Params::quiet`): there from the
-    /// start, and calmer still less so while the storm is hot after a wrong
-    /// password.
+    /// start, and less calm while the storm is hot after a wrong password.
     fn quiet(&self, storming: bool) -> [f32; 4] {
         let t = self.tuning;
         if t.quiet <= 0.0 || !storming {
@@ -366,7 +345,6 @@ impl Storm {
         };
         // Wind strength, wind feature size (~1/3 screen height), fine turbulence.
         let wind = if storming { WIND * t.intensity * (1.0 + 0.8 * self.entropy) } else { 0.0 };
-        params.tide = self.tide(t.tide, storming);
         params.density = if storming { t.density } else { 0.0 };
         params.quiet = self.quiet(storming);
         params.forcing = [wind, 20.0, 55.0 * t.swirl, if std::mem::take(&mut self.shatter) { 1.0 } else { 0.0 }];

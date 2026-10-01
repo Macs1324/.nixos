@@ -146,12 +146,12 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
     let u = P.unit;
     let dt = P.dt;
 
-    // Home positions matter while eroding, during tides, and flying home.
+    // Home positions matter while eroding, in quiet zones, and flying home.
     let releasing = P.homing == 0.0 && P.time < P.release_start + P.release_dur + 0.2;
     let homing = P.homing > 0.0;
-    let tides = P.tide.y > 0.0 || P.quiet.w > 0.0;
+    let quiet_zones = P.quiet.w > 0.0;
     var h = vec2<f32>(0.0);
-    if (releasing || homing || tides) {
+    if (releasing || homing || quiet_zones) {
         h = home_of(i);
     }
     // Erosion: grains break loose in patches, not all at once.
@@ -197,23 +197,13 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
             v += pull;
         }
     }
-    // Tide: a soft band sweeping across the canvas (centre anchor.x, half
-    // width anchor.y px). Grains whose home it passes fly home, so the desktop
-    // reassembles in a moving strip, and are released behind it to erode
-    // again: no grain ever mixes for longer than one sweep, so the storm
-    // never turns to soup. (Per-grain pulls outside such a band clump.)
-    var tide = 0.0;
-    if (P.tide.y > 0.0 && b == 0u && !homing) {
-        let x = abs(h.x - P.tide.x) / P.tide.y;
-        tide = (1.0 - smoothstep(0.35, 1.0, x)) * P.tide.z;
-    }
     // Quiet zones: where a slowly morphing noise field over home positions
     // is strong, the storm is calmer for those grains: it carries them more
     // slowly and a soft spring draws them towards home, so the desktop
     // shows through blurred and rippling in scattered patches that come and
-    // go. Never fully at rest (that is `tide`). Density correction refills
-    // what they draw away.
-    if (P.quiet.w > 0.0 && b == 0u && !homing) {
+    // go, so the storm never mixes into one soup. Never fully at rest.
+    // Density correction refills what they draw away.
+    if (quiet_zones && b == 0u && !homing) {
         let calm = quiet_at(h);
         if (calm > 0.0) {
             // Slower flow plus a pull proportional to the distance from home
@@ -226,11 +216,6 @@ fn main(@builtin(global_invocation_id) gid: vec3<u32>, @builtin(num_workgroups) 
             if (len > cap) { pull *= cap / len; }
             v = v * (1.0 - 0.8 * calm) + pull;
         }
-    }
-    if (tide > 0.0) {
-        let k = 30.0;
-        let spring = s.zw + dt * (k * (h - pos) - 2.0 * sqrt(k) * s.zw);
-        v = mix(v, spring, tide);
     }
     if (homing) {
         // Springs home, a little underdamped; the storm fades out as they

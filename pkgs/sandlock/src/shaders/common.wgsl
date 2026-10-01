@@ -18,7 +18,6 @@ struct Params {
     splat_count: u32,
     cell_x: f32,         // horizontally: the grid ends exactly at the canvas edge
     seed: u32,           // changes every step: per-step randomness
-    tide: vec4<f32>,     // tide: x band centre px, y half width px (0 = off), z strength
     density: f32,        // density correction rate (1/s, 0 = off)
     homing_t: f32,       // seconds since the grains started flying home
     homing_done: f32,    // ... and when every grain must be exactly home

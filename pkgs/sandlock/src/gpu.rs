@@ -47,8 +47,6 @@ pub(crate) struct Params {
     pub(crate) splat_count: u32,
     pub(crate) cell_x: f32,
     pub(crate) seed: u32,
-    /// Tide: band centre (px), half width (px, 0 = off), strength, unused.
-    pub(crate) tide: [f32; 4],
     /// Density correction rate (1/s, 0 = off).
     pub(crate) density: f32,
     /// Seconds since the grains started flying home, and when every grain
@@ -556,7 +554,6 @@ impl Sim {
             splat_count: 0,
             cell_x,
             seed: 0,
-            tide: [0.0; 4],
             density: 0.0,
             homing_t: 0.0,
             homing_done: 0.0,

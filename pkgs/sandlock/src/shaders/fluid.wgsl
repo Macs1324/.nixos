@@ -152,7 +152,7 @@ fn pressure(@builtin(global_invocation_id) id: vec3<u32>) {
 
 // Density correction: the canvas holds one grain per pixel on average (the
 // offscreen canvas has grains too), so a cell with more grains than pixels is
-// crowded and one with fewer has thinned out, e.g. where tides or attractors
+// crowded and one with fewer has thinned out, e.g. where quiet zones or attractors
 // pulled grains away. Its excess is the source of a correction potential
 // (laplacian(phi) = source, solved by `pressure`) whose gradient the grains
 // follow (grains.wgsl `drift_at`): out of crowded cells into thin ones. The
