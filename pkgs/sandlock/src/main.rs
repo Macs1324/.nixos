@@ -222,7 +222,9 @@ fn main() -> anyhow::Result<()> {
         return bench::run(&config, &bench);
     }
     let lock_mode = daemonize && !preview;
-    let mut instance = match daemon::single_instance(lock_mode)? {
+    // One budget for waiting on another instance and for locking.
+    let deadline = Instant::now() + daemon::LOCK_TIMEOUT;
+    let mut instance = match daemon::single_instance(lock_mode.then_some(deadline))? {
         daemon::Start::Run(instance) => instance,
         daemon::Start::AlreadyLocked => {
             log::info!("the session is already locked by sandlock");
@@ -237,7 +239,7 @@ fn main() -> anyhow::Result<()> {
     };
     // Fork before anything spawns a thread; the parent returns once locked.
     let mut ready = if lock_mode {
-        daemon::daemonize()?
+        daemon::daemonize(deadline)?
     } else {
         daemon::Ready::none()
     };

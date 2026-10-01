@@ -11,10 +11,11 @@ const LOCK_EX: c_int = 2;
 const LOCK_NB: c_int = 4;
 const POLLIN: c_short = 1;
 
-/// How long `-f` waits for the session to be locked before giving up, so the
-/// caller's fallback still gets to lock before logind's suspend delay
-/// (InhibitDelayMaxSec, 5 s by default) runs out.
-const LOCK_TIMEOUT: Duration = Duration::from_secs(4);
+/// How long `-f` waits, all told (for another instance, then for its own
+/// lock), before giving up, so the caller's fallback still gets to lock
+/// before logind's suspend delay (InhibitDelayMaxSec, 5 s by default) runs
+/// out.
+pub(crate) const LOCK_TIMEOUT: Duration = Duration::from_secs(4);
 
 #[repr(C)]
 struct PollFd {
@@ -68,10 +69,10 @@ pub(crate) enum Start {
     Busy,
 }
 
-/// Becomes the single sandlock instance. With `wait`, a running instance that
-/// has not locked yet is given `LOCK_TIMEOUT` to lock (or exit, in which case
-/// this process takes over) before `Busy` is returned.
-pub(crate) fn single_instance(wait: bool) -> anyhow::Result<Start> {
+/// Becomes the single sandlock instance. With a `wait` deadline, a running
+/// instance that has not locked yet is given until then to lock (or exit, in
+/// which case this process takes over) before `Busy` is returned.
+pub(crate) fn single_instance(wait: Option<Instant>) -> anyhow::Result<Start> {
     // Not /tmp: another user could create the file there first and hold it.
     let dir = std::env::var_os("XDG_RUNTIME_DIR")
         .ok_or_else(|| anyhow::anyhow!("XDG_RUNTIME_DIR is not set"))?;
@@ -82,7 +83,6 @@ pub(crate) fn single_instance(wait: bool) -> anyhow::Result<Start> {
         .read(true)
         .write(true)
         .open(&path)?;
-    let deadline = Instant::now() + LOCK_TIMEOUT;
     loop {
         // SAFETY: plain syscall on an fd we own.
         if unsafe { flock(file.as_raw_fd(), LOCK_EX | LOCK_NB) } == 0 {
@@ -96,7 +96,7 @@ pub(crate) fn single_instance(wait: bool) -> anyhow::Result<Start> {
         if locked {
             return Ok(Start::AlreadyLocked);
         }
-        if !wait || Instant::now() >= deadline {
+        if wait.is_none_or(|deadline| Instant::now() >= deadline) {
             return Ok(Start::Busy);
         }
         std::thread::sleep(Duration::from_millis(50));
@@ -119,10 +119,10 @@ impl Ready {
 }
 
 /// Forks. The parent waits until the child reports the lock is in place, then
-/// exits 0; if the child dies first, or has not locked within `LOCK_TIMEOUT`,
-/// it exits 1, so `sandlock -f || fallback` never leaves a machine unlocked.
+/// exits 0; if the child dies first, or has not locked by `deadline`, it
+/// exits 1, so `sandlock -f || fallback` never leaves a machine unlocked.
 /// Must run before any thread is spawned.
-pub(crate) fn daemonize() -> anyhow::Result<Ready> {
+pub(crate) fn daemonize(deadline: Instant) -> anyhow::Result<Ready> {
     let mut fds = [0 as c_int; 2];
     // SAFETY: `fds` has room for the two descriptors.
     if unsafe { pipe(fds.as_mut_ptr()) } != 0 {
@@ -141,7 +141,6 @@ pub(crate) fn daemonize() -> anyhow::Result<Ready> {
         }
         _ => {
             drop(write);
-            let deadline = Instant::now() + LOCK_TIMEOUT;
             let mut pipe = File::from(read);
             let locked = loop {
                 let left = deadline.saturating_duration_since(Instant::now());
