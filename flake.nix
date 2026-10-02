@@ -118,7 +118,6 @@
           inputs.nixvim.homeModules.nixvim
           inputs.zen-browser.homeModules.default
           inputs.niri.homeModules.niri
-          inputs.noctalia.homeModules.default
           inputs.spicetify-nix.homeManagerModules.default
           inputs.nix-index-database.homeModules.nix-index
           (./hosts + "/${host}/home.nix")
