@@ -8,7 +8,17 @@
       enable = true;
       settings = {
         options = {
-          theme = "auto";
+          # Keep the colored mode block, let the rest of the bar show through.
+          theme.__raw = ''
+            (function()
+              local theme = vim.deepcopy(require("lualine.themes.auto"))
+              for _, mode in pairs(theme) do
+                mode.b.bg = "None"
+                mode.c.bg = "None"
+              end
+              return theme
+            end)()
+          '';
           section_separators = {
             left = "";
             right = "";
@@ -215,5 +225,49 @@
   extraConfigLua = ''
     -- UI specific lua config
     vim.opt.termguicolors = true
+
+    -- mini.base16 (the Stylix colorscheme) gives the gutter, statusline and
+    -- tabline an opaque base01/base02 background. Drop it so they match the
+    -- transparent editor area, keeping each group's foreground.
+    local function clear_ui_backgrounds()
+      local groups = {
+        "LineNr", "LineNrAbove", "LineNrBelow", "CursorLineNr",
+        "CursorLine", "CursorLineSign", "CursorLineFold",
+        "SignColumn", "FoldColumn",
+        "StatusLine", "StatusLineNC", "WinBar", "WinBarNC",
+        "TabLine", "TabLineFill", "TabLineSel",
+        "MiniTablineCurrent", "MiniTablineVisible", "MiniTablineHidden",
+        "MiniTablineTrunc",
+        "MiniDiffSignAdd", "MiniDiffSignChange", "MiniDiffSignDelete",
+        "GitSignsAdd", "GitSignsChange", "GitSignsDelete", "GitSignsUntracked",
+      }
+      for _, name in ipairs(groups) do
+        local hl = vim.api.nvim_get_hl(0, { name = name, link = false })
+        hl.bg, hl.ctermbg = nil, nil
+        vim.api.nvim_set_hl(0, name, hl)
+      end
+      -- Without a CursorLine background, the bold number marks the current line.
+      local nr = vim.api.nvim_get_hl(0, { name = "CursorLineNr", link = false })
+      nr.bold = true
+      vim.api.nvim_set_hl(0, "CursorLineNr", nr)
+      -- Same for the current tab: use TabLineSel's accent as its text color.
+      local tab = vim.api.nvim_get_hl(0, { name = "MiniTablineCurrent", link = false })
+      tab.fg = vim.api.nvim_get_hl(0, { name = "TabLineSel", link = false }).fg
+      vim.api.nvim_set_hl(0, "MiniTablineCurrent", tab)
+      -- Modified buffers are drawn inverted; show the accent as text instead.
+      for _, name in ipairs({
+        "MiniTablineModifiedCurrent",
+        "MiniTablineModifiedVisible",
+        "MiniTablineModifiedHidden",
+      }) do
+        local hl = vim.api.nvim_get_hl(0, { name = name, link = false })
+        if hl.bg then
+          hl.fg, hl.bg, hl.ctermbg = hl.bg, nil, nil
+          vim.api.nvim_set_hl(0, name, hl)
+        end
+      end
+    end
+    clear_ui_backgrounds()
+    vim.api.nvim_create_autocmd("ColorScheme", { callback = clear_ui_backgrounds })
   '';
 }
