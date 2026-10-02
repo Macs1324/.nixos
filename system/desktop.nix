@@ -1,17 +1,18 @@
 {
+  config,
   pkgs,
   inputs,
   ...
-}: let
-  sddmTheme = pkgs.sddm-astronaut.override {embeddedTheme = "pixel_sakura";};
-in {
-  # The theme must be in systemPackages so SDDM finds it under
-  # /run/current-system/sw/share/sddm/themes; extraPackages only adds its Qt deps.
-  services.displayManager.sddm = {
+}: {
+  # Noctalia Greeter on greetd. Its look (wallpaper, palette, font) is pushed
+  # from the shell by `shell.greeter_sync` (home/theme.nix), not set here.
+  services.displayManager.noctalia-greeter = {
     enable = true;
-    wayland.enable = true;
-    theme = "sddm-astronaut-theme";
-    extraPackages = [sddmTheme];
+    cursorTheme = {inherit (config.stylix.cursor) package name;};
+    settings.cursor.size = config.stylix.cursor.size;
+    # The sync helper only ever writes appearance settings, so it runs without
+    # a password prompt for this user.
+    passwordlessSyncUsers = ["macs"];
   };
 
   services.avahi = {
@@ -102,7 +103,6 @@ in {
   security.pam.services.sandlock = {};
   environment.systemPackages = [
     inputs.sandlock.packages.${pkgs.stdenv.hostPlatform.system}.default
-    sddmTheme
     inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default
     pkgs.xwayland-satellite
     pkgs.xarchiver

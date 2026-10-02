@@ -15,7 +15,7 @@ in {
 
   # logind's default for a short press is poweroff, which a lid-adjacent button
   # makes easy to hit by accident. niri already intercepts the key; this covers
-  # Hyprland, SDDM and the TTYs.
+  # Hyprland, the greeter and the TTYs.
   services.logind.settings.Login = {
     HandlePowerKey = "suspend";
     HandlePowerKeyLongPress = "poweroff";

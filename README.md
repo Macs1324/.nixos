@@ -22,7 +22,7 @@ hosts/<host>/
   monitors.nix          monitor and wallpaper inventory
 system/                 shared NixOS modules
   base.nix              boot, locale, user, Nix settings and housekeeping
-  desktop.nix           SDDM, audio, portals, Hyprland, Niri, Flatpak
+  desktop.nix           greeter, audio, portals, Hyprland, Niri, Flatpak
   development.nix       languages, Podman, PostgreSQL, sysctl
   work.nix              development.nix plus work-only packages
   games.nix             Steam, controllers, media apps
@@ -183,7 +183,10 @@ palette until they are declared and switched. Apps that Stylix can theme are
 configured through Home Manager rather than `environment.systemPackages`:
 Discord is Vesktop (`home/discord.nix`) and Spotify is patched by Spicetify
 (`home/spotify.nix`), imported per host from `hosts/<host>/home.nix`.
-Hyprlock keeps its blurred screenshot background; SDDM keeps its own theme.
+Hyprlock keeps its blurred screenshot background. Noctalia Greeter (greetd)
+takes its wallpaper, palette and font from the shell: `shell.greeter_sync`
+pushes them on every change without a password prompt. After the first switch,
+use Settings → Security → Sync Now once to seed it.
 
 ## Secrets
 

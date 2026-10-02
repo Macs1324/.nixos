@@ -67,7 +67,7 @@ in {
   imports = [../modules/theme.nix];
 
   # WhiteSur's frosted-glass menu over this host's desktop wallpaper, so GRUB,
-  # the boot splash, SDDM and the desktop share one look. GRUB only draws on
+  # the boot splash and the desktop share one look. GRUB only draws on
   # the output the firmware picks, normally the primary monitor.
   stylix.targets.grub.enable = false;
   boot.loader.grub2-theme = {
