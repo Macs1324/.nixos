@@ -178,7 +178,7 @@ in {
 
       # Animations. Springs stay critically damped (no overshoot) but are
       # stiffer than niri's defaults so scrolling, workspace switches and
-      # resizes settle faster. Open/close use short ease-out curves.
+      # resizes settle faster.
       animations = {
         enable = true;
         # slowdown = 3.0;
@@ -208,13 +208,21 @@ in {
           stiffness = 1100;
           epsilon = 0.0001;
         };
-        window-open.kind.easing = {
-          duration-ms = 120;
-          curve = "ease-out-expo";
+        # Windows come apart into a fine dust of their own pixels and fly
+        # back in from it, like sandlock's grains (home/niri-shaders).
+        window-open = {
+          kind.easing = {
+            duration-ms = 400;
+            curve = "ease-out-expo";
+          };
+          custom-shader = builtins.readFile ./niri-shaders/sand.glsl + builtins.readFile ./niri-shaders/open.glsl;
         };
-        window-close.kind.easing = {
-          duration-ms = 100;
-          curve = "ease-out-quad";
+        window-close = {
+          kind.easing = {
+            duration-ms = 320;
+            curve = "ease-out-quad";
+          };
+          custom-shader = builtins.readFile ./niri-shaders/sand.glsl + builtins.readFile ./niri-shaders/close.glsl;
         };
         config-notification-open-close.kind.spring = {
           damping-ratio = 0.7;
