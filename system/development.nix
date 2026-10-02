@@ -2,7 +2,8 @@
   pkgs,
   lib,
   ...
-}: {
+}:
+{
   # Increase the amount of inotify watchers
   # Note that inotify watches consume 1kB on 64-bit machines.
   boot.kernel.sysctl = {
@@ -12,7 +13,7 @@
   };
   services.postgresql = {
     enable = true;
-    ensureDatabases = ["clockout"];
+    ensureDatabases = [ "clockout" ];
     authentication = lib.mkOverride 10 ''
       #type database  DBuser  auth-method
       local all       all     trust
@@ -36,7 +37,7 @@
     sqlite
 
     # Dev tools
-    pgadmin4
+    # pgadmin4
     git-lfs
     gource
   ];
