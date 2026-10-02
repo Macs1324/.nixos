@@ -920,9 +920,30 @@
         "nixpkgs": "nixpkgs_3",
         "nixvim": "nixvim",
         "noctalia": "noctalia",
+        "sandlock": "sandlock",
         "spicetify-nix": "spicetify-nix",
         "stylix": "stylix",
         "zen-browser": "zen-browser"
+      }
+    },
+    "sandlock": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1790940709,
+        "narHash": "sha256-owIFLkYTQNsnAS86XRuiAOaW2L3O57+0mvXXnLVlXjo=",
+        "owner": "Macs1324",
+        "repo": "sandlock",
+        "rev": "2c4867e49a24cff56391747d83799e9d626553eb",
+        "type": "github"
+      },
+      "original": {
+        "owner": "Macs1324",
+        "repo": "sandlock",
+        "type": "github"
       }
     },
     "spicetify-nix": {

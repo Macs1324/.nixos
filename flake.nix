@@ -57,6 +57,12 @@
       url = "github:numtide/llm-agents.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # The lock screen (home/sandlock.nix); develop it in its own checkout.
+    sandlock = {
+      url = "github:Macs1324/sandlock";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs = inputs @ {
@@ -93,7 +99,6 @@
           touch $out
         '';
     };
-    sandlock = pkgs.callPackage ./pkgs/sandlock/package.nix {};
   in {
     nixosConfigurations = lib.genAttrs readyHosts (host:
       lib.nixosSystem {
@@ -125,16 +130,7 @@
       });
 
     # Exposed as packages so `nix build .#monitor-model` resolves the system itself.
-    packages.${system} = tests // {inherit sandlock;};
-
-    # `nix develop .#sandlock` for iterating on the lock screen with cargo.
-    devShells.${system}.sandlock = pkgs.mkShell {
-      inputsFrom = [sandlock];
-      packages = with pkgs; [cargo rustc clippy rustfmt rust-analyzer];
-      LD_LIBRARY_PATH = lib.makeLibraryPath (with pkgs; [vulkan-loader libGL wayland libxkbcommon]);
-      # Lets `cargo test` run the PAM conversation test (skipped without it).
-      SANDLOCK_TEST_PAM_LIB = "${pkgs.linux-pam}/lib/security";
-    };
+    packages.${system} = tests;
 
     # Flake checking normally ignores custom homeConfigurations outputs.
     checks.${system} =

@@ -98,10 +98,10 @@ in {
 
   services.seatd.enable = true;
   security.pam.services.hyprlock = {};
-  # sandlock (pkgs/sandlock) checks passwords against this stack.
+  # sandlock (inputs.sandlock) checks passwords against this stack.
   security.pam.services.sandlock = {};
   environment.systemPackages = [
-    (pkgs.callPackage ../pkgs/sandlock/package.nix {})
+    inputs.sandlock.packages.${pkgs.stdenv.hostPlatform.system}.default
     sddmTheme
     inputs.noctalia.packages.${pkgs.stdenv.hostPlatform.system}.default
     pkgs.xwayland-satellite

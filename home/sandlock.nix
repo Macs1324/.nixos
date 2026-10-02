@@ -2,11 +2,12 @@
   config,
   lib,
   pkgs,
+  inputs,
   ...
 }: let
   cfg = config.programs.sandlock;
   toml = pkgs.formats.toml {};
-  sandlock = lib.getExe (pkgs.callPackage ../pkgs/sandlock/package.nix {});
+  sandlock = lib.getExe inputs.sandlock.packages.${pkgs.stdenv.hostPlatform.system}.default;
   noctalia = lib.getExe config.programs.noctalia.package;
   # `sandlock -f` returns only once the session is locked. If it cannot lock
   # for any reason, Noctalia's own lock takes over, so nothing (least of all a
@@ -24,7 +25,7 @@ in {
           swirl = 0.35;
         };
       };
-      description = "sandlock's config.toml; see pkgs/sandlock/src/config.rs for every key.";
+      description = "sandlock's config.toml; see src/config.rs in github:Macs1324/sandlock for every key.";
     };
     lockCommand = lib.mkOption {
       type = lib.types.str;
