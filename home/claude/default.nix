@@ -175,6 +175,7 @@ in
       enableMcpIntegration = true;
 
       settings = {
+        attribution.commit = "";
         env.CLAUDE_CODE_EXPERIMENTAL_AGENT_TEAMS = "1";
         model = "claude-opus-5-5[1m]";
         alwaysThinkingEnabled = true;
