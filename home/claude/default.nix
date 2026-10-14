@@ -150,7 +150,7 @@ in
     description = ''
       work: every write is approved, pushes are always manual, bypass mode is
       locked out, credential directories are unreadable.
-      personal: edits and local toolchain commands run unprompted; `vibe`
+      personal: edits and local toolchain commands run unprompted; `cvibe`
       drops all prompts for throwaway experiments.
     '';
   };
@@ -221,11 +221,11 @@ in
       if work then
         {
           # Bypass mode is disabled on work hosts; this is as loose as it gets.
-          vibe = "claude --permission-mode acceptEdits";
+          cvibe = "claude --permission-mode acceptEdits";
         }
       else
         {
-          vibe = "claude --dangerously-skip-permissions";
+          cvibe = "claude --dangerously-skip-permissions";
         };
   };
 }

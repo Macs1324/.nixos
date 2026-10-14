@@ -1,9 +1,16 @@
 {
   config,
   pkgs,
+  inputs,
   ...
 }: {
   imports = [./claude];
+
+  programs.mistral-vibe = {
+    enable = true;
+    # Same source as claude-code: llm-agents tracks releases ahead of nixpkgs.
+    package = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.mistral-vibe;
+  };
 
   programs.codex = {
     enable = true;
