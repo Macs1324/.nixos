@@ -40,5 +40,6 @@
     # pgadmin4
     git-lfs
     gource
+    ansible
   ];
 }
