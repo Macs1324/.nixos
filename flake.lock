@@ -930,11 +930,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1791457207,
-        "narHash": "sha256-GGLdcuWMw0ffOOWJDgfvXyiWh96YYYSAql2iyI8zT5s=",
+        "lastModified": 1792408787,
+        "narHash": "sha256-2IysX/4aeUdqseYlGaMmWapSfjVBEF3+miQ33gaDvtg=",
         "owner": "Macs1324",
         "repo": "sandlock",
-        "rev": "6aa753ef32bf2048be71b8a10ef5854b531e27b9",
+        "rev": "130c5c391a70d3a6b188e22567a00754ecbd5e6e",
         "type": "github"
       },
       "original": {
