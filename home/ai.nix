@@ -7,7 +7,10 @@
   imports = [./claude];
 
   programs.mistral-vibe = {
-    enable = true;
+    # Disabled 2026-10-26: unstable's mcp 2.2.0 / wrapt 2.x break both the
+    # nixpkgs (3.0.1, failing tests) and llm-agents (3.0.2, opentelemetry pin)
+    # builds. Re-enable once either is fixed.
+    enable = false;
     # Same source as claude-code: llm-agents tracks releases ahead of nixpkgs.
     package = inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.mistral-vibe;
   };

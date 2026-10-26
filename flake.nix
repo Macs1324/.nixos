@@ -58,6 +58,11 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # MCP server for nixpkgs/options lookups (home/claude). Deliberately NOT
+    # following nixpkgs: unstable's mcp 2.x marks fastmcp-slim broken, so the
+    # nixpkgs mcp-nixos does not evaluate.
+    mcp-nixos.url = "github:utensils/mcp-nixos";
+
     # The lock screen (home/sandlock.nix); develop it in its own checkout.
     sandlock = {
       url = "github:Macs1324/sandlock";

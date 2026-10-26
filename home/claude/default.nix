@@ -4,8 +4,7 @@
   lib,
   pkgs,
   ...
-}:
-let
+}: let
   cfg = config.ai.claude;
   work = cfg.profile == "work";
 
@@ -113,34 +112,33 @@ let
     "WebSearch"
   ];
 
-  denied = [
-    "Read(**/.env)"
-    "Read(**/.env.*)"
-    "Read(**/secrets/**)"
-    "Read(~/.ssh/**)"
-    "Read(~/.gnupg/**)"
-    "Bash(git push --force:*)"
-    "Bash(git push -f:*)"
-    "Bash(git push --force-with-lease:*)"
-    "Bash(git reset --hard:*)"
-    "Bash(rm -rf /:*)"
-    "Bash(rm -rf ~:*)"
-  ]
-  ++ lib.optionals work [
-    "Read(~/.aws/**)"
-    "Read(~/.kube/**)"
-    "Read(~/.config/gcloud/**)"
-    "Read(~/.docker/config.json)"
-    "Bash(git push:*)"
-  ];
+  denied =
+    [
+      "Read(**/.env)"
+      "Read(**/.env.*)"
+      "Read(**/secrets/**)"
+      "Read(~/.ssh/**)"
+      "Read(~/.gnupg/**)"
+      "Bash(git push --force:*)"
+      "Bash(git push -f:*)"
+      "Bash(git push --force-with-lease:*)"
+      "Bash(git reset --hard:*)"
+      "Bash(rm -rf /:*)"
+      "Bash(rm -rf ~:*)"
+    ]
+    ++ lib.optionals work [
+      "Read(~/.aws/**)"
+      "Read(~/.kube/**)"
+      "Read(~/.config/gcloud/**)"
+      "Read(~/.docker/config.json)"
+      "Bash(git push:*)"
+    ];
 
-  mdDir =
-    dir:
+  mdDir = dir:
     lib.mapAttrs' (file: _: lib.nameValuePair (lib.removeSuffix ".md" file) (dir + "/${file}")) (
       lib.filterAttrs (f: t: t == "regular" && lib.hasSuffix ".md" f) (builtins.readDir dir)
     );
-in
-{
+in {
   options.ai.claude.profile = lib.mkOption {
     type = lib.types.enum [
       "work"
@@ -161,7 +159,7 @@ in
       enable = true;
       servers = {
         nixos = {
-          command = lib.getExe pkgs.mcp-nixos;
+          command = lib.getExe inputs.mcp-nixos.packages.${pkgs.stdenv.hostPlatform.system}.default;
         };
         context7 = {
           command = lib.getExe pkgs.context7-mcp;
@@ -184,7 +182,10 @@ in
         enabledPlugins."rust-analyzer-lsp@claude-plugins-official" = true;
 
         permissions = {
-          defaultMode = if work then "default" else "acceptEdits";
+          defaultMode =
+            if work
+            then "default"
+            else "acceptEdits";
           allow = readOnlyCommands ++ lib.optionals (!work) vibeCommands;
           deny = denied;
           disableBypassPermissionsMode = lib.mkIf work "disable";
@@ -208,7 +209,10 @@ in
           padding = 0;
         };
 
-        cleanupPeriodDays = if work then 30 else 90;
+        cleanupPeriodDays =
+          if work
+          then 30
+          else 90;
       };
 
       context = ./CLAUDE.md;
@@ -218,14 +222,13 @@ in
     };
 
     programs.zsh.shellAliases =
-      if work then
-        {
-          # Bypass mode is disabled on work hosts; this is as loose as it gets.
-          cvibe = "claude --permission-mode acceptEdits";
-        }
-      else
-        {
-          cvibe = "claude --dangerously-skip-permissions";
-        };
+      if work
+      then {
+        # Bypass mode is disabled on work hosts; this is as loose as it gets.
+        cvibe = "claude --permission-mode acceptEdits";
+      }
+      else {
+        cvibe = "claude --dangerously-skip-permissions";
+      };
   };
 }
