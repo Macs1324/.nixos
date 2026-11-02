@@ -1,4 +1,4 @@
-{pkgs, ...}: {
+{ pkgs, ... }: {
   imports = [
     ../modules/apps.nix
     ./monitors.nix
@@ -18,14 +18,13 @@
   ];
   xdg.portal = {
     enable = true;
-    extraPortals = [pkgs.xdg-desktop-portal-gtk];
+    extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
   };
   home.username = "macs";
   home.homeDirectory = "/home/macs";
   home.stateVersion = "24.05";
   programs.home-manager.enable = true;
   home.packages = [
-    pkgs.hyprland-qtutils
     pkgs.brightnessctl
   ];
 }
