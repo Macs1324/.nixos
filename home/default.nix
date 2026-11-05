@@ -1,4 +1,4 @@
-{ pkgs, ... }: {
+{pkgs, ...}: {
   imports = [
     ../modules/apps.nix
     ./monitors.nix
@@ -6,6 +6,7 @@
     ./programs.nix
     ./terminals.nix
     ./shell.nix
+    ./nushell.nix
     ./environment.nix
     ./notifications.nix
     ./hyprland.nix
@@ -18,7 +19,7 @@
   ];
   xdg.portal = {
     enable = true;
-    extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
+    extraPortals = [pkgs.xdg-desktop-portal-gtk];
   };
   home.username = "macs";
   home.homeDirectory = "/home/macs";
