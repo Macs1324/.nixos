@@ -2,8 +2,7 @@
   pkgs,
   inputs,
   ...
-}:
-let
+}: let
   # Boot splash from adi1090x's theme pack; preview them all at
   # github.com/adi1090x/plymouth-themes and change this name to swap.
   plymouthTheme = "hexagon_dots";
@@ -14,10 +13,12 @@ let
   # measured on the wrong screen: re-centre on the canvas (`GetWidth()`) every
   # frame, which is the centre of each monitor.
   plymouthThemes =
-    (pkgs.adi1090x-plymouth-themes.override { selected_themes = [ plymouthTheme ]; }).overrideAttrs
-      (old: {
-        # installPhase is overridden without runHook, so postInstall would never run.
-        postFixup = (old.postFixup or "") + ''
+    (pkgs.adi1090x-plymouth-themes.override {selected_themes = [plymouthTheme];}).overrideAttrs
+    (old: {
+      # installPhase is overridden without runHook, so postInstall would never run.
+      postFixup =
+        (old.postFixup or "")
+        + ''
           substituteInPlace $out/share/plymouth/themes/${plymouthTheme}/${plymouthTheme}.script \
             --replace-fail 'Window.GetWidth(0)' 'Window.GetWidth()' \
             --replace-fail 'Window.GetHeight(0)' 'Window.GetHeight()' \
@@ -30,9 +31,8 @@ let
             }
           Plymouth.SetRefreshFunction (centred_refresh_callback);'
         '';
-      });
-in
-{
+    });
+in {
   # Bootloader.
   boot.loader.timeout = null;
   boot.loader.grub.enable = true;
@@ -51,7 +51,7 @@ in
   boot.plymouth = {
     enable = true;
     theme = plymouthTheme;
-    themePackages = [ plymouthThemes ];
+    themePackages = [plymouthThemes];
   };
   # boot.initrd.systemd.enable = true;
   boot.consoleLogLevel = 3;
@@ -80,13 +80,15 @@ in
     LC_TIME = "sv_SE.UTF-8";
   };
 
-  users.groups.uinput = { };
-  users.groups.plugdev = { };
+  users.groups.uinput = {};
+  users.groups.plugdev = {};
   # Define a user account. Don't forget to set a password with ‘passwd’.
   users.users.macs = {
     isNormalUser = true;
     description = "Max Blank";
-    shell = pkgs.zsh;
+    # Stays POSIX for session startup and remote commands; home/nushell.nix hands
+    # interactive logins over to Nushell.
+    shell = pkgs.bashInteractive;
     extraGroups = [
       "networkmanager"
       "wheel"
@@ -146,7 +148,7 @@ in
 
     # `nix shell nixpkgs#foo` and legacy `<nixpkgs>` resolve to this flake's pinned nixpkgs.
     registry.nixpkgs.flake = inputs.nixpkgs;
-    nixPath = [ "nixpkgs=flake:nixpkgs" ];
+    nixPath = ["nixpkgs=flake:nixpkgs"];
   };
 
   # Weekly prune of old generations, always keeping at least as many as the

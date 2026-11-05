@@ -8,6 +8,16 @@
   cfg = config.ai.claude;
   work = cfg.profile == "work";
 
+  shellAliases =
+    if work
+    then {
+      # Bypass mode is disabled on work hosts; this is as loose as it gets.
+      cvibe = "claude --permission-mode acceptEdits";
+    }
+    else {
+      cvibe = "claude --dangerously-skip-permissions";
+    };
+
   # Formats a file Claude just wrote. Only alejandra and jq are hard deps;
   # every other formatter is used when the project already provides it, so
   # this never fails a tool call over a missing binary.
@@ -221,14 +231,7 @@ in {
       rules = mdDir ./rules;
     };
 
-    programs.zsh.shellAliases =
-      if work
-      then {
-        # Bypass mode is disabled on work hosts; this is as loose as it gets.
-        cvibe = "claude --permission-mode acceptEdits";
-      }
-      else {
-        cvibe = "claude --dangerously-skip-permissions";
-      };
+    programs.zsh.shellAliases = shellAliases;
+    programs.nushell.shellAliases = shellAliases;
   };
 }

@@ -2,7 +2,7 @@
   programs.alacritty = {
     enable = true;
     settings = {
-      terminal.shell.program = "zsh";
+      terminal.shell.program = "nu";
 
       window = {
         dimensions = {
@@ -23,6 +23,7 @@
   programs.kitty = {
     enable = true;
     settings = {
+      shell = "nu";
       single_instance = "yes";
 
       # Neovide-like motion: animate cursor jumps and fade the blink smoothly.
@@ -59,6 +60,7 @@
   programs.ghostty = {
     enable = true;
     settings = {
+      command = "nu";
       window-padding-x = 4;
       window-padding-y = 4;
       confirm-close-surface = false;
