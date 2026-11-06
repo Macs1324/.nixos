@@ -20,6 +20,14 @@
   };
   programs.opencode = {
     enable = true;
+    # 2026-11-06: nixpkgs' opencode 2.2.5 ships a stale node_modules FOD hash.
+    # Drop this override once nixpkgs fixes it (the build will then fail with
+    # a hash mismatch pointing back at the upstream value).
+    package = pkgs.opencode.overrideAttrs (old: {
+      node_modules = old.node_modules.overrideAttrs {
+        outputHash = "sha256-prx9dX7kUvs/E3zopkaPk5LXh3xJAy5sZeum/W8L7cA=";
+      };
+    });
     # Picks up the MCP servers declared in home/claude/default.nix.
     enableMcpIntegration = true;
 
