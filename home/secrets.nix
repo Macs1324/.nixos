@@ -17,7 +17,7 @@ in {
     ];
     # Remote hosts rarely ship tmux-256color or xterm-kitty terminfo; send a
     # TERM every server knows. ssh uses this as the pty type, no AcceptEnv needed.
-    matchBlocks."*".setEnv.TERM = "xterm-256color";
+    settings."*".SetEnv.TERM = "xterm-256color";
   };
 
   # Copy each decrypted SSH fragment into ~/.ssh/config.d. Files that are still

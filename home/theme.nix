@@ -1,4 +1,4 @@
-{...}: {
+{lib, ...}: {
   imports = [../modules/theme.nix];
 
   # Noctalia draws per-monitor wallpapers (home/monitors.nix) in both sessions,
@@ -12,6 +12,12 @@
   stylix.targets.qt.enable = true;
   stylix.targets.firefox.profileNames = ["default"];
   stylix.targets.zen-browser.profileNames = ["default"];
+  # rofi is not used; the target only trips Stylix's own `programs.rofi.font` rename warning.
+  stylix.targets.rofi.enable = false;
+  # Stylix still writes the OpenCode 1 tui.json, which OpenCode 2 ignores. The
+  # theme selection already lives in the app-owned cli.json (migrated by OpenCode);
+  # Stylix keeps supplying the theme file itself.
+  programs.opencode.tui = lib.mkForce {};
 
   home.pointerCursor = {
     gtk.enable = true;
