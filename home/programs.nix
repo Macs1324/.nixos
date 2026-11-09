@@ -57,6 +57,7 @@
   programs.tmux = {
     enable = true;
     terminal = "tmux-256color";
+    mouse = true;
     # The login shell is bash, and its hand-off to nu (nushell.nix) only fires
     # at SHLVL 1, which a tmux pane never is.
     shell = lib.getExe config.programs.nushell.package;
