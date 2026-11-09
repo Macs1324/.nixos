@@ -65,6 +65,13 @@
       # Ghostty speaks modifyOtherKeys; kitty doesn't, so it sends CSI u itself
       # (see the shift+enter map in terminals.nix).
       set -as terminal-features 'xterm*:RGB:extkeys'
+      # Undercurl/coloured underlines and OSC 8 links; kitty supports both.
+      set -as terminal-features 'xterm*:usstyle:hyperlinks'
+      # Forward focus in/out to panes (nvim FocusGained/autoread).
+      set -g focus-events on
+      # Claude Code drops to 256 colours under $TMUX unless told truecolor
+      # passes through, which the RGB feature above makes true.
+      set-environment -g CLAUDE_CODE_TMUX_TRUECOLOR 1
       set -s extended-keys on
       set -s extended-keys-format csi-u
 

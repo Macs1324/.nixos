@@ -192,10 +192,7 @@ in {
         enabledPlugins."rust-analyzer-lsp@claude-plugins-official" = true;
 
         permissions = {
-          defaultMode =
-            if work
-            then "default"
-            else "acceptEdits";
+          defaultMode = "auto";
           allow = readOnlyCommands ++ lib.optionals (!work) vibeCommands;
           deny = denied;
           disableBypassPermissionsMode = lib.mkIf work "disable";
