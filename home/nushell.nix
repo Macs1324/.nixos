@@ -17,8 +17,12 @@
       nv = "neovide --fork";
     };
     extraConfig = ''
-      if ($env.TERM? in [xterm-kitty xterm-ghostty]) and ($env.TMUX? | is-empty) {
-        fastfetch
+      # Inside tmux, TERM is tmux's own; ask it which terminal the client runs in.
+      let in_tmux = not ($env.TMUX? | is-empty)
+      let outer_term = if $in_tmux { tmux display-message -p '#{client_termname}' } else { $env.TERM? }
+      if $outer_term in [xterm-kitty xterm-ghostty] {
+        # tmux eats raw kitty graphics; `kitten icat` uses unicode placeholders there.
+        if $in_tmux { fastfetch --logo-type kitty-icat } else { fastfetch }
       } else {
         fastfetch --logo nixos --logo-type small
       }

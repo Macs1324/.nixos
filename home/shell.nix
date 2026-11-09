@@ -7,7 +7,8 @@
   # programs.ncspot.enable = true;
 
   # A small image greeting on every interactive shell. The logo uses the kitty
-  # graphics protocol, so other terminals (and tmux) get the small ASCII logo.
+  # graphics protocol, so other terminals get the small ASCII logo; under tmux
+  # it goes through `kitten icat` (see the shell init below).
   programs.fastfetch = {
     enable = true;
     settings = {
@@ -61,8 +62,9 @@
     autosuggestion.enable = true;
     syntaxHighlighting.enable = true;
     initContent = ''
-      if [[ ( $TERM == xterm-kitty || $TERM == xterm-ghostty ) && -z $TMUX ]]; then
-        fastfetch
+      if [[ -n $TMUX ]]; then outer_term=$(tmux display-message -p '#{client_termname}'); else outer_term=$TERM; fi
+      if [[ $outer_term == xterm-kitty || $outer_term == xterm-ghostty ]]; then
+        if [[ -n $TMUX ]]; then fastfetch --logo-type kitty-icat; else fastfetch; fi
       else
         fastfetch --logo nixos --logo-type small
       fi

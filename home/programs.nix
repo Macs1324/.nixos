@@ -1,4 +1,9 @@
-{pkgs, ...}: {
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: {
   programs.firefox = {
     enable = true;
     # Preserve the pre-26.05 profile location until it is migrated explicitly.
@@ -51,6 +56,25 @@
 
   programs.tmux = {
     enable = true;
+    terminal = "tmux-256color";
+    # The login shell is bash, and its hand-off to nu (nushell.nix) only fires
+    # at SHLVL 1, which a tmux pane never is.
+    shell = lib.getExe config.programs.nushell.package;
+    extraConfig = ''
+      # Truecolor and modified keys (Shift+Enter etc.) from the outer terminal.
+      # Ghostty speaks modifyOtherKeys; kitty doesn't, so it sends CSI u itself
+      # (see the shift+enter map in terminals.nix).
+      set -as terminal-features 'xterm*:RGB:extkeys'
+      set -s extended-keys on
+      set -s extended-keys-format csi-u
+
+      # Let kitty graphics (kitten icat, fastfetch) reach the outer terminal.
+      set -g allow-passthrough on
+
+      # kitty keys its tmux-only bindings off this title prefix.
+      set -g set-titles on
+      set -g set-titles-string 'tmux #S:#W'
+    '';
   };
 
   programs.btop = {

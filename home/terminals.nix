@@ -1,4 +1,20 @@
-{pkgs, ...}: {
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}: let
+  tmux = lib.getExe config.programs.tmux.package;
+  # Pick up a detached session if there is one (so closing a window doesn't
+  # leak sessions), otherwise start a new one.
+  kittyTmux = pkgs.writeShellScript "kitty-tmux" ''
+    read -r session < <(${tmux} list-sessions -f '#{==:#{session_attached},0}' -F '#{session_id}' 2>/dev/null)
+    if [[ -n $session ]]; then
+      exec ${tmux} attach-session -t "$session"
+    fi
+    exec ${tmux} new-session
+  '';
+in {
   programs.alacritty = {
     enable = true;
     settings = {
@@ -23,7 +39,7 @@
   programs.kitty = {
     enable = true;
     settings = {
-      shell = "nu";
+      shell = "${kittyTmux}";
       single_instance = "yes";
 
       # Neovide-like motion: animate cursor jumps and fade the blink smoothly.
@@ -53,6 +69,9 @@
       "ctrl+shift+equal" = "change_font_size all +2.0";
       "ctrl+shift+minus" = "change_font_size all -2.0";
       "ctrl+shift+backspace" = "change_font_size all 0";
+      # tmux can't request the kitty keyboard protocol, so send Shift+Enter as
+      # CSI u while tmux is focused (it sets the window title to "tmux ...").
+      "--when-focus-on title:^tmux shift+enter" = "send_text all \\e[13;2u";
     };
   };
 
