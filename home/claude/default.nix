@@ -189,7 +189,11 @@ in {
         alwaysThinkingEnabled = true;
         tui = "fullscreen";
         agentPushNotifEnabled = true;
-        enabledPlugins."rust-analyzer-lsp@claude-plugins-official" = true;
+        enabledPlugins = {
+          "rust-analyzer-lsp@claude-plugins-official" = true;
+          "superpowers@claude-plugins-official" = true;
+          "frontend-design@claude-plugins-official" = true;
+        };
 
         permissions = {
           defaultMode = "auto";
