@@ -6,6 +6,9 @@
 }: {
   imports = [./claude];
 
+  # Codex uses bwrap from PATH for its Linux sandbox.
+  home.packages = [pkgs.bubblewrap];
+
   programs.mistral-vibe = {
     # Disabled 2026-10-26: unstable's mcp 2.2.0 / wrapt 2.x break both the
     # nixpkgs (3.0.1, failing tests) and llm-agents (3.0.2, opentelemetry pin)
